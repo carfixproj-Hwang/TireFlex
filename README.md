@@ -1,73 +1,35 @@
-# React + TypeScript + Vite
+1. **“5일짜리(멀티데이) 예약 생성”부터 끝까지 확실히 고치기**
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+- 지금 가장 큰 상품(하이캠 같은 7200분)이 막히면 매출 동선이 끊겨.
+- 체크 포인트: `create_reservation` RPC가 **workdays 아이템을 “여러 segment 예약”으로 쪼개고**, 각 segment에 `root_reservation_id / segment_no`를 **항상 채우는지**(이전에 NOT NULL 에러 있었음).
+- 또 체크: “중간 차단/휴무가 있으면 건너뛰기” 로직이 **실제 운영 설정(영업일/오픈요일/휴무/blocked)** 기준으로 정확히 다음 영업일로 밀리는지.
 
-Currently, two official plugins are available:
+1. **테스트를 자동화해서 ‘안정화’를 숫자로 만들기**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Playwright(E2E): “로그인 → 예약조회 → 예약생성(분/5일) → 관리자 캘린더에서 이동 → 상태 변경” 시나리오.
+- DB 레벨 테스트(최소): `create_reservation` / `admin_reschedule_reservation` / `get_available_slots`에 대해 케이스별로 결과 검증.
+- 목표: 배포 전 버튼 한 번으로 “핵심 플로우가 안 깨짐” 확인.
 
-## React Compiler
+1. **관측(Observability) 넣기**
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+- 서버(FastAPI/Edge/RPC)든 프론트든 지금은 “깨지면 사용자 제보로 앎” 상태일 확률이 큼.
+- 최소 구성:
+  - 프론트: 에러/성공 이벤트 로깅(예약생성 실패 사유, RPC error code)
+  - 서버/DB: RPC별 실패율, 평균 응답시간, 가장 많은 에러 메시지 Top N
+- “어디가 아픈지”가 보이면 안정화가 진짜 안정화가 돼.
 
-## Expanding the ESLint configuration
+1. **권한/RLS/관리자 흐름 보안 점검**
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- 관리자 페이지는 특히 “RLS 정책 중복” 경고도 있었고, 기능이 늘수록 구멍이 생겨.
+- 점검: 예약/차단/아이템 CRUD가 **관리자만** 되는지, anon/auth role에서 우회 가능한 쿼리 없는지.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1. **운영 기능 우선순위**
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- 현실적으로 운영자가 매일 쓰는 건:
+  - 오늘 예약 한 눈에 보기
+  - 멀티데이 작업의 진행(세그먼트) 상태
+  - 차단/휴무 처리
+  - 고객 연락/메모
+- 그래서 다음 기능으로는 “**멀티데이 예약을 캘린더에서 보기 좋게**(1건처럼 보이되 내부는 segments)”를 제일 먼저 잡겠어.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+원하면 내가 “다음 작업 순서 체크리스트”를 너 프로젝트 상황에 맞게 10개 항목 정도로 딱 끊어서 만들어줄게.
