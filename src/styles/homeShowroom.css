@@ -1,0 +1,420 @@
+.showroomSimple {
+  --mx: 50px;
+  --my: 50px;
+  position: relative;
+  overflow: hidden;
+  min-height: calc(100vh - 120px);
+}
+
+.showroomBg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(1400px 900px at 18% 18%, rgba(190, 210, 255, 0.18), transparent 60%),
+    radial-gradient(900px 700px at 85% 22%, rgba(255, 255, 255, 0.10), transparent 62%),
+    radial-gradient(900px 700px at 70% 88%, rgba(140, 255, 230, 0.10), transparent 62%),
+    linear-gradient(180deg, #07080d, #0a0c15);
+  pointer-events: none;
+}
+
+.showroomNoise {
+  position: absolute;
+  inset: -2px;
+  pointer-events: none;
+  opacity: 0.12;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
+}
+
+.showroomSpot {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(520px 520px at var(--mx) var(--my), rgba(255, 255, 255, 0.14), transparent 62%);
+  opacity: 0.95;
+}
+
+.heroSimple {
+  position: relative;
+  padding: 62px 18px 46px;
+}
+
+.heroInner {
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.brandMark {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.96), rgba(170, 200, 255, 0.86));
+  box-shadow: 0 22px 70px rgba(0,0,0,0.55);
+}
+
+.brandText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.brandName {
+  font-weight: 950;
+  letter-spacing: -0.3px;
+}
+
+.brandSub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.62);
+}
+
+.pill {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(12px);
+  color: rgba(255,255,255,0.82);
+}
+
+.pill.admin {
+  border-color: rgba(140, 255, 230, 0.26);
+  background: rgba(140, 255, 230, 0.10);
+}
+
+.heroTitle {
+  margin: 18px 0 10px;
+  font-size: clamp(34px, 4.6vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.9px;
+  color: rgba(255,255,255,0.92);
+}
+
+.heroSub {
+  margin: 0;
+  max-width: 60ch;
+  color: rgba(255,255,255,0.70);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.ctaRow {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btnPrimary {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.95), rgba(170, 200, 255, 0.88));
+  color: rgba(10, 12, 20, 0.92);
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  box-shadow: 0 22px 70px rgba(0,0,0,0.55);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.btnPrimary.small {
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnSheen {
+  position: absolute;
+  inset: -2px;
+  background: radial-gradient(300px 220px at 20% 20%, rgba(255, 255, 255, 0.85), transparent 55%);
+  opacity: 0.85;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  transform: translateX(-12px);
+}
+
+.btnGhost {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.86);
+  font-weight: 900;
+  padding: 12px 14px;
+  border-radius: 16px;
+  text-decoration: none;
+}
+
+.btnGhost.small {
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+}
+
+.btnGhost:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.opsSummary {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 920px) {
+  .opsSummary { grid-template-columns: 1fr; }
+  .pill { margin-left: 0; }
+}
+
+.opsBox {
+  border-radius: 22px;
+  padding: 14px 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 26px 90px rgba(0,0,0,0.45);
+}
+
+.opsLabel {
+  font-size: 12px;
+  color: rgba(255,255,255,0.66);
+  font-weight: 850;
+}
+
+.opsValue {
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 950;
+  letter-spacing: -0.2px;
+}
+
+.chipRow {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.82);
+}
+
+.chip.ghost {
+  color: rgba(255,255,255,0.60);
+}
+
+.blocksMini {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.blockRow {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.blockTime {
+  font-weight: 900;
+  font-size: 12px;
+  color: rgba(255,255,255,0.82);
+}
+
+.blockReason {
+  font-size: 12px;
+  color: rgba(255,255,255,0.62);
+  text-align: right;
+}
+
+.muted {
+  color: rgba(255,255,255,0.62);
+  font-size: 12px;
+}
+
+/* 간단 에러 박스 */
+.alertSimple {
+  margin-top: 14px;
+  border-radius: 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 0, 220, 0.22);
+  background: rgba(255, 0, 220, 0.10);
+  color: rgba(255, 255, 255, 0.92);
+  display: grid;
+  gap: 10px;
+}
+
+.alertTitle {
+  font-weight: 950;
+}
+
+.alertBody {
+  color: rgba(255,255,255,0.80);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ===== Modal (아이템 선택 패널) ===== */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.62);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  z-index: 80;
+}
+
+.modalPanel {
+  width: min(980px, 100%);
+  border-radius: 26px;
+  background: rgba(12, 14, 22, 0.78);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 30px 120px rgba(0,0,0,0.65);
+  overflow: hidden;
+}
+
+.modalHead {
+  padding: 14px 14px;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+
+.modalTitle {
+  font-weight: 950;
+  letter-spacing: -0.2px;
+}
+
+.modalSub {
+  margin-top: 4px;
+  color: rgba(255,255,255,0.62);
+  font-size: 12px;
+}
+
+.iconBtn {
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.88);
+  border-radius: 14px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.modalBody {
+  padding: 14px;
+}
+
+.itemList {
+  display: grid;
+  gap: 10px;
+}
+
+.itemRow {
+  border-radius: 20px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .itemRow { grid-template-columns: 1fr; }
+}
+
+.itemName {
+  font-weight: 950;
+  letter-spacing: -0.2px;
+}
+
+.tagOff {
+  margin-left: 8px;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 80, 120, 0.18);
+  border: 1px solid rgba(255, 80, 120, 0.22);
+  color: rgba(255,255,255,0.82);
+  font-weight: 900;
+}
+
+.itemDesc {
+  margin-top: 6px;
+  color: rgba(255,255,255,0.66);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.itemMeta {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.itemActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.modalFoot {
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.footBtns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  color: rgba(255,255,255,0.82);
+}
+
+
+/* HomePage.tsx에서 사용하는 추가 클래스 */
+.sectionMiniTitle {
+  margin: 6px 0 10px;
+  font-weight: 950;
+  color: rgba(255,255,255,0.86);
+  letter-spacing: -0.2px;
+}
