@@ -1,0 +1,334 @@
+/* src/styles/onboardingPremium.css */
+
+/* 페이지 래퍼 */
+.onbWrap {
+  width: min(980px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 26px 0 38px;
+}
+
+/* 상단 타이틀 영역 */
+.onbHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.onbTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 920;
+  letter-spacing: -0.4px;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.onbSub {
+  margin-top: 6px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.64);
+  line-height: 1.45;
+}
+
+.onbBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.onbBadgeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(140, 255, 230, 0.85);
+  box-shadow: 0 0 18px rgba(140, 255, 230, 0.35);
+}
+
+/* 글래스 카드 */
+.onbCard {
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  overflow: hidden;
+}
+
+/* 카드 상단 얇은 라인 (고급 느낌 포인트) */
+.onbCardTopline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.22),
+    rgba(140, 255, 230, 0.22),
+    rgba(255, 255, 255, 0.22),
+    transparent
+  );
+  opacity: 0.9;
+}
+
+/* 카드 본문 */
+.onbBody {
+  padding: 18px;
+}
+
+/* 폼 레이아웃 */
+.onbForm {
+  display: grid;
+  gap: 14px;
+}
+
+.onbGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 820px) {
+  .onbWrap {
+    width: min(980px, calc(100% - 28px));
+  }
+  .onbGrid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 필드 */
+.onbField {
+  display: grid;
+  gap: 8px;
+}
+
+.onbLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.onbLabel {
+  font-size: 12px;
+  font-weight: 850;
+  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: 0.02em;
+}
+
+.onbHint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.52);
+}
+
+/* 인풋/텍스트에어리어 공통 */
+.onbInput,
+.onbTextarea {
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 14, 22, 0.62);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+  padding: 12px 12px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.10);
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.onbInput::placeholder,
+.onbTextarea::placeholder {
+  color: rgba(255, 255, 255, 0.36);
+}
+
+.onbInput:focus,
+.onbTextarea:focus {
+  border-color: rgba(140, 255, 230, 0.28);
+  box-shadow: 0 0 0 4px rgba(140, 255, 230, 0.10), inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  background: rgba(10, 14, 22, 0.72);
+}
+
+.onbTextarea {
+  resize: vertical;
+  min-height: 110px;
+  line-height: 1.55;
+}
+
+/* 에러 상태 */
+.onbInput.isError,
+.onbTextarea.isError {
+  border-color: rgba(251, 113, 133, 0.42);
+  box-shadow: 0 0 0 4px rgba(251, 113, 133, 0.10), inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.onbError {
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(251, 113, 133, 0.92);
+}
+
+/* 체크박스 */
+.onbCheckRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.onbCheckRow input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: rgba(140, 255, 230, 0.85);
+}
+
+.onbCheckText {
+  display: grid;
+  gap: 2px;
+}
+
+.onbCheckTitle {
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.90);
+  font-size: 13px;
+}
+
+.onbCheckSub {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+}
+
+/* 하단 액션 */
+.onbActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.onbBtnPrimary {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(10, 14, 22, 0.98);
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  cursor: pointer;
+  min-width: 170px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  transition: transform 140ms ease, filter 140ms ease, background 140ms ease;
+}
+
+.onbBtnPrimary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+.onbBtnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 버튼에 은은한 빛 */
+.onbBtnSheen {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: radial-gradient(700px 120px at var(--mx, 40%) var(--my, 30%), rgba(255, 255, 255, 0.55), transparent 55%);
+  opacity: 0.55;
+  mix-blend-mode: overlay;
+}
+
+/* 보조 버튼 */
+.onbBtnGhost {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.90);
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.onbBtnGhost:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* 메시지 토스트 */
+.onbToast {
+  margin-top: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 12px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.onbToast.ok {
+  border-color: rgba(140, 255, 230, 0.18);
+  background: rgba(140, 255, 230, 0.08);
+}
+
+.onbToast.warn {
+  border-color: rgba(255, 206, 98, 0.20);
+  background: rgba(255, 206, 98, 0.08);
+}
+
+.onbToast.err {
+  border-color: rgba(251, 113, 133, 0.22);
+  background: rgba(251, 113, 133, 0.10);
+}
+
+/* 스켈레톤 로딩 */
+.onbSkeleton {
+  display: grid;
+  gap: 12px;
+}
+
+.onbSkRow {
+  height: 44px;
+  border-radius: 16px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.09),
+    rgba(255, 255, 255, 0.05)
+  );
+  background-size: 200% 100%;
+  animation: onbShimmer 1.1s ease-in-out infinite;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.onbSkRow.big {
+  height: 120px;
+}
+
+@keyframes onbShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

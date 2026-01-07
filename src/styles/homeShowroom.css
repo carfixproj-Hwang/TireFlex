@@ -39,16 +39,67 @@
   padding: 62px 18px 46px;
 }
 
-.heroInner {
-  max-width: 1160px;
-  margin: 0 auto;
+.brandLogoLink:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.085);
+  border-color: rgba(255,255,255,0.16);
 }
 
-.brandRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+.brandLogoImg{
+  height:34px;           /* 핵심: 너무 크면 올드해짐 */
+  width:auto;
+  display:block;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.35));
+}
+
+/* ✅ 워터마크: 히어로 텍스트 뒤에 은근하게 */
+.heroInner{
+  position: relative;
+}
+
+.brandRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:18px;
+}
+
+/* 로고 링크 영역 */
+.brandLogoLink{
+  display:flex;
+  align-items:center;
+  padding:10px 12px;
+  border-radius:14px;
+  text-decoration:none;
+
+  /* glass */
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.heroInner::after{
+  content:"";
+  position:absolute;
+  right:-40px;
+  top:10px;
+  width: 420px;
+  height: 180px;
+
+  background-image: url("../assets/tireflex-logo.png"); /* 경로 맞춰주세요 */
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: right top;
+
+  opacity: 0.10;
+  pointer-events:none;
+  transform: rotate(-2deg);
+  filter: blur(0.2px) saturate(1.05);
 }
 
 .brandMark {
@@ -75,22 +126,18 @@
   color: rgba(255,255,255,0.62);
 }
 
-.pill {
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.4px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(12px);
-  color: rgba(255,255,255,0.82);
+.pill{
+  border-radius:999px;
+  padding:6px 12px;
+  font-size:12px;
+  letter-spacing:.08em;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.06);
+  color:rgba(255,255,255,.75);
 }
-
-.pill.admin {
-  border-color: rgba(140, 255, 230, 0.26);
-  background: rgba(140, 255, 230, 0.10);
+.pill.admin{
+  background:rgba(255,120,120,.12);
+  border-color:rgba(255,120,120,.3);
 }
 
 .heroTitle {
@@ -351,7 +398,15 @@
 @media (max-width: 720px) {
   .itemRow { grid-template-columns: 1fr; }
 }
-
+@media (max-width: 640px){
+  .brandLogoImg{ height:30px; }
+  .heroInner::after{
+    width: 280px;
+    height: 120px;
+    right:-30px;
+    opacity: 0.08;
+  }
+}
 .itemName {
   font-weight: 950;
   letter-spacing: -0.2px;

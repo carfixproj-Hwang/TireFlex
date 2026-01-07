@@ -1,0 +1,627 @@
+/* src/styles/adminServicesPremium.css */
+
+:root {
+  --as-bg0: #07080d;
+  --as-bg1: #0b0d16;
+
+  --as-text: rgba(255, 255, 255, 0.92);
+  --as-muted: rgba(255, 255, 255, 0.66);
+
+  --as-line: rgba(255, 255, 255, 0.12);
+  --as-glass: rgba(255, 255, 255, 0.06);
+  --as-glass2: rgba(255, 255, 255, 0.04);
+
+  --as-ok: rgba(110, 231, 183, 1);
+  --as-danger: rgba(251, 113, 133, 1);
+  --as-warn: rgba(251, 191, 36, 1);
+  --as-info: rgba(160, 190, 255, 1);
+}
+
+.asShell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 12px 12px 28px;
+  color: var(--as-text);
+}
+
+.asBg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(1200px 900px at 18% 10%, rgba(160, 190, 255, 0.14), transparent 60%),
+    radial-gradient(900px 700px at 82% 20%, rgba(210, 220, 255, 0.10), transparent 60%),
+    radial-gradient(900px 700px at 70% 90%, rgba(140, 255, 230, 0.08), transparent 60%),
+    linear-gradient(180deg, var(--as-bg0), var(--as-bg1));
+}
+
+.asTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.asTitleWrap {
+  display: grid;
+  gap: 6px;
+}
+
+.asKicker {
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  font-size: 12px;
+}
+
+.asTitle {
+  margin: 0;
+  font-weight: 950;
+  letter-spacing: -0.7px;
+  font-size: 22px;
+}
+
+.asSub {
+  font-size: 12px;
+  color: var(--as-muted);
+}
+
+.asTopRight {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.asSearch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 32, 0.72);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+}
+
+.asSearchIcon {
+  opacity: 0.85;
+  font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+}
+
+.asSearchInput {
+  width: 320px;
+  max-width: 58vw;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--as-text);
+  font-size: 14px;
+}
+
+.asSearchInput::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.asGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1.35fr;
+}
+
+@media (max-width: 980px) {
+  .asGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.asCard {
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 28px 120px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.asCardTall {
+  min-height: 480px;
+}
+
+.asCardHead {
+  padding: 14px 14px 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.asCardTitle {
+  font-weight: 950;
+  letter-spacing: -0.4px;
+}
+
+.asCardDesc {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--as-muted);
+}
+
+.asCount {
+  font-size: 12px;
+  opacity: 0.75;
+  font-weight: 900;
+}
+
+.asPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+}
+
+.asPillInfo {
+  border-color: rgba(160, 190, 255, 0.25);
+  background: rgba(160, 190, 255, 0.10);
+}
+
+.asPillGlass {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.asForm {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 560px) {
+  .asForm {
+    grid-template-columns: 1fr;
+  }
+  .asSpan2 {
+    grid-column: auto;
+  }
+}
+
+.asSpan2 {
+  grid-column: 1 / -1;
+}
+
+.asField {
+  display: grid;
+  gap: 8px;
+}
+
+.asLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.86);
+  font-weight: 900;
+}
+
+.asInputWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 32, 0.72);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+}
+
+.asInputWrapSm {
+  padding: 10px 10px;
+  width: 140px;
+}
+
+.asInputWrap:focus-within {
+  border-color: rgba(160, 190, 255, 0.40);
+  box-shadow: 0 0 0 3px rgba(160, 190, 255, 0.14), 0 18px 60px rgba(0, 0, 0, 0.28);
+}
+
+.asIcon {
+  width: 26px;
+  height: 26px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  opacity: 0.85;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.asInput {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+}
+
+.asInput::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.asRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.asSelectWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.asSelect {
+  padding: 11px 44px 11px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 32, 0.92);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+}
+
+.asSelect:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.asSelectArrow {
+  position: absolute;
+  right: 12px;
+  pointer-events: none;
+  font-size: 12px;
+  opacity: 0.85;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.asTextarea {
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 32, 0.72);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+  resize: vertical;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+}
+
+.asTextarea:focus {
+  border-color: rgba(160, 190, 255, 0.40);
+  box-shadow: 0 0 0 3px rgba(160, 190, 255, 0.14), 0 18px 60px rgba(0, 0, 0, 0.28);
+}
+
+.asHint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.3;
+}
+
+.asFooter {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.asToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.90);
+  user-select: none;
+}
+
+.asToggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.asToggleUi {
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.10);
+  display: inline-block;
+  position: relative;
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.25);
+}
+
+.asToggleUi::after {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+  transition: transform 0.18s ease;
+}
+
+.asToggle input:checked + .asToggleUi::after {
+  transform: translate(18px, -50%);
+}
+
+.asToggle input:checked + .asToggleUi {
+  border-color: rgba(110, 231, 183, 0.30);
+  background: rgba(110, 231, 183, 0.14);
+}
+
+.asBtn {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  border-radius: 16px;
+  padding: 10px 12px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.asBtn:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.asBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.asBtnPrimary {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+  color: #0b0f18;
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.40);
+}
+
+.asBtnPrimary:hover {
+  filter: brightness(1.02);
+}
+
+.asBtnGhost {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.asBtnDanger {
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  background: rgba(251, 113, 133, 0.14);
+}
+
+.asBtnMini {
+  padding: 10px 12px;
+  border-radius: 16px;
+}
+
+.asNotice {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.asNoticeBottom {
+  margin: 12px;
+}
+
+.asNotice.isOk {
+  border-color: rgba(110, 231, 183, 0.30);
+  background: rgba(110, 231, 183, 0.10);
+}
+
+.asNotice.isErr {
+  border-color: rgba(251, 113, 133, 0.30);
+  background: rgba(251, 113, 133, 0.10);
+}
+
+.asList {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.asItem {
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+}
+
+@media (max-width: 980px) {
+  .asItem {
+    grid-template-columns: 1fr;
+  }
+}
+
+.asItemMain {
+  padding: 12px 12px 10px;
+}
+
+.asItemSide {
+  padding: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.03);
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 980px) {
+  .asItemSide {
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+  }
+}
+
+.asItemTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.asItemName {
+  font-weight: 950;
+  letter-spacing: -0.3px;
+}
+
+.asItemDesc {
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.76);
+  line-height: 1.35;
+}
+
+.asItemDesc.isEmpty {
+  opacity: 0.55;
+}
+
+.asMeta {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.70);
+}
+
+.asMono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+}
+
+.asSep {
+  opacity: 0.45;
+}
+
+.asBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 950;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.asBadge.isOn {
+  border-color: rgba(110, 231, 183, 0.28);
+  background: rgba(110, 231, 183, 0.12);
+}
+
+.asBadge.isOff {
+  border-color: rgba(251, 113, 133, 0.28);
+  background: rgba(251, 113, 133, 0.12);
+}
+
+.asDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(110, 231, 183, 0.95);
+  box-shadow: 0 0 16px rgba(110, 231, 183, 0.55);
+}
+
+.asBadge.isOff .asDot {
+  background: rgba(251, 113, 133, 0.95);
+  box-shadow: 0 0 16px rgba(251, 113, 133, 0.55);
+}
+
+.asSideLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 900;
+}
+
+.asDur {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.asDurInput {
+  width: 120px;
+  padding: 11px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 32, 0.72);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+}
+
+.asDurInput:focus {
+  border-color: rgba(160, 190, 255, 0.40);
+  box-shadow: 0 0 0 3px rgba(160, 190, 255, 0.14), 0 18px 60px rgba(0, 0, 0, 0.28);
+}
+
+.asActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.asEmpty {
+  padding: 16px;
+  font-size: 12px;
+  opacity: 0.75;
+  color: rgba(255, 255, 255, 0.85);
+}

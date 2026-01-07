@@ -1,0 +1,513 @@
+/* src/styles/adminCalendarPremium.css */
+
+/* 전체 톤: appShell.css랑 같은 “다크 글래스” 계열로 맞춤 */
+
+:root {
+  --cal-bg0: #07080d;
+  --cal-bg1: #0b0d16;
+
+  --cal-text: rgba(255, 255, 255, 0.92);
+  --cal-muted: rgba(255, 255, 255, 0.68);
+
+  --cal-line: rgba(255, 255, 255, 0.10);
+  --cal-glass: rgba(255, 255, 255, 0.06);
+  --cal-glass2: rgba(255, 255, 255, 0.04);
+
+  --cal-shadow: rgba(0, 0, 0, 0.55);
+
+  --cal-ok: rgba(110, 231, 183, 1);
+  --cal-warn: rgba(251, 191, 36, 1);
+  --cal-danger: rgba(251, 113, 133, 1);
+  --cal-info: rgba(160, 190, 255, 1);
+}
+
+.calShell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 14px 14px 24px;
+  color: var(--cal-text);
+}
+
+.calBg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(1200px 900px at 20% 10%, rgba(160, 190, 255, 0.12), transparent 60%),
+    radial-gradient(900px 700px at 80% 20%, rgba(210, 220, 255, 0.09), transparent 60%),
+    radial-gradient(900px 700px at 70% 90%, rgba(140, 255, 230, 0.07), transparent 60%),
+    linear-gradient(180deg, var(--cal-bg0), var(--cal-bg1));
+}
+
+/* Top */
+.calTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.calTopLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.calTopRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.calTitle {
+  display: grid;
+  gap: 2px;
+}
+
+.calTitleMain {
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  font-size: 18px;
+}
+
+.calTitleSub {
+  font-size: 12px;
+  color: var(--cal-muted);
+}
+
+.calIconBtn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  padding: 8px 10px;
+  cursor: pointer;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+}
+
+.calIconBtn:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.calChips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.calChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.calChipOk {
+  border: 1px solid rgba(110, 231, 183, 0.25);
+  background: rgba(110, 231, 183, 0.10);
+}
+
+.calChipDanger {
+  border: 1px solid rgba(251, 113, 133, 0.25);
+  background: rgba(251, 113, 133, 0.10);
+}
+
+.calBtn {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.92);
+  color: #0b0f18;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.40);
+}
+
+.calBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.calBtnGhost {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.calBtnGhost:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.calHint {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+}
+
+.calSaving {
+  margin-left: auto;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.calMsg {
+  color: rgba(251, 113, 133, 0.95);
+}
+
+/* Week head */
+.calWeekHead {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.calWeekName {
+  font-weight: 900;
+  opacity: 0.78;
+  padding: 0 6px;
+  font-size: 12px;
+}
+
+.calSun {
+  color: rgba(251, 113, 133, 0.95);
+}
+
+.calSat {
+  color: rgba(160, 190, 255, 0.95);
+}
+
+/* Grid */
+.calGrid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.calCell {
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  padding: 10px;
+  min-height: 116px;
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.calCell:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.calCellEmpty {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+  min-height: 116px;
+}
+
+.calCellTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.calDayNo {
+  font-weight: 950;
+  letter-spacing: -0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.calDayMeta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.calTodayPill {
+  font-size: 11px;
+  font-weight: 950;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(160, 190, 255, 0.28);
+  background: rgba(160, 190, 255, 0.10);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.calBadges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.calPill {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.calPillInfo {
+  border: 1px solid rgba(160, 190, 255, 0.22);
+  background: rgba(160, 190, 255, 0.10);
+}
+
+.calPillDanger {
+  border: 1px solid rgba(251, 113, 133, 0.24);
+  background: rgba(251, 113, 133, 0.10);
+}
+
+.calPill:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.calList {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.calItem {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: grab;
+  user-select: none;
+}
+
+.calItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.calItem.isDragging {
+  opacity: 0.6;
+}
+
+.calBullet {
+  opacity: 0.85;
+}
+
+.calItemText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calItemMeta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.calMore {
+  opacity: 0.7;
+}
+
+.calEmpty {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.calEmptyLine {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.62);
+  padding: 8px 2px;
+}
+
+/* States */
+.calCell.isSelected {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 26px 90px rgba(0, 0, 0, 0.40);
+}
+
+.calCell.isToday {
+  box-shadow: 0 26px 90px rgba(0, 0, 0, 0.40), 0 0 0 1px rgba(160, 190, 255, 0.12);
+}
+
+.calCell.hasBlocked {
+  background: linear-gradient(180deg, rgba(251, 113, 133, 0.10), rgba(255, 255, 255, 0.03));
+  border-color: rgba(251, 113, 133, 0.20);
+}
+
+.calCell.isDragOver {
+  outline: 2px solid rgba(255, 255, 255, 0.85);
+  outline-offset: -2px;
+}
+
+/* Panel */
+.calPanel {
+  margin-top: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.calPanelHead {
+  padding: 12px 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.calPanelTitle {
+  font-weight: 950;
+  letter-spacing: -0.4px;
+}
+
+.calPanelActions {
+  display: flex;
+  gap: 8px;
+}
+
+.calPanelBody {
+  padding: 12px;
+  display: grid;
+  gap: 14px;
+}
+
+.calSection {
+  display: grid;
+  gap: 10px;
+}
+
+.calSectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.calSectionTitle {
+  font-weight: 950;
+  letter-spacing: -0.2px;
+}
+
+.calSectionSub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.calCards {
+  display: grid;
+  gap: 10px;
+}
+
+.calCard {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 54px rgba(0, 0, 0, 0.30);
+}
+
+.calCard:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.calCardDanger {
+  border-color: rgba(251, 113, 133, 0.22);
+  background: rgba(251, 113, 133, 0.10);
+}
+
+.calCardTitle {
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  line-height: 1.3;
+}
+
+.calCardSub {
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.70);
+}
+
+.calCardDot {
+  opacity: 0.65;
+  margin: 0 6px;
+}
+
+/* Responsive */
+@media (max-width: 860px) {
+  .calShell {
+    padding: 12px 12px 22px;
+  }
+
+  .calGrid,
+  .calWeekHead {
+    gap: 6px;
+  }
+
+  .calCell {
+    min-height: 104px;
+    padding: 9px;
+  }
+
+  .calItem {
+    padding: 6px 7px;
+  }
+}
+
+@media (max-width: 560px) {
+  .calTitleSub {
+    display: none;
+  }
+  .calDayMeta {
+    display: none;
+  }
+  .calCell {
+    border-radius: 16px;
+  }
+}

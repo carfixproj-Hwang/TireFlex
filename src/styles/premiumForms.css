@@ -1,0 +1,307 @@
+/* Premium Forms / Pages (Book, Onboarding) */
+
+.pPage {
+  padding: 22px 18px 34px;
+}
+
+.pContainer {
+  width: min(980px, calc(100% - 0px));
+  margin: 0 auto;
+}
+
+.pTitleRow{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom: 14px;
+}
+
+.pTitle{
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.2px;
+  font-weight: 860;
+}
+
+.pSub{
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pHint{
+  font-size: 12px;
+  color: rgba(255,255,255,.55);
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.04);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.pGrid2{
+  display:grid;
+  grid-template-columns: 1.15fr .85fr;
+  gap: 14px;
+}
+
+@media (max-width: 860px){
+  .pGrid2{ grid-template-columns: 1fr; }
+  .pHint{ display:none; }
+}
+
+.pCard{
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.035));
+  backdrop-filter: blur(12px);
+  box-shadow: 0 24px 90px rgba(0,0,0,.45);
+  padding: 14px;
+}
+
+.pCardTitle{
+  font-weight: 850;
+  font-size: 14px;
+  letter-spacing: -0.1px;
+  margin-bottom: 10px;
+}
+
+.pRow{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 10px;
+  align-items:center;
+}
+
+.pField{
+  display:grid;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.pLabel{
+  font-size: 12px;
+  color: rgba(255,255,255,.66);
+}
+
+.pInput, .pSelect, .pText, .pBtn{
+  font: inherit;
+}
+
+.pInput, .pSelect, .pText{
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(10,12,20,.35);
+  color: rgba(255,255,255,.92);
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+
+.pSelect{
+  padding-right: 34px;
+}
+
+.pText{
+  resize: vertical;
+  min-height: 110px;
+}
+
+.pInput:focus, .pSelect:focus, .pText:focus{
+  border-color: rgba(160,190,255,.55);
+  box-shadow: 0 0 0 4px rgba(160,190,255,.14);
+  background: rgba(10,12,20,.45);
+}
+
+.pCheckRow{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin-top: 8px;
+  color: rgba(255,255,255,.82);
+}
+
+.pCheckRow input{
+  width: 16px;
+  height: 16px;
+  accent-color: rgba(160,190,255,.85);
+}
+
+.pBtnPrimary{
+  border: 1px solid rgba(255,255,255,.16);
+  background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.10));
+  color: rgba(255,255,255,.92);
+  border-radius: 14px;
+  padding: 11px 12px;
+  font-weight: 820;
+  cursor: pointer;
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.pBtnPrimary:hover{
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.22);
+  background: linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,.12));
+}
+
+.pBtnPrimary:disabled{
+  opacity: .65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pMetaLine{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 10px;
+  margin-top: 10px;
+  color: rgba(255,255,255,.68);
+  font-size: 12px;
+}
+
+.pChip{
+  border-radius: 999px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+}
+
+.pSlots{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 860px){
+  .pSlots{ grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 520px){
+  .pSlots{ grid-template-columns: repeat(2, 1fr); }
+}
+
+.pSlotBtn{
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.86);
+  padding: 11px 10px;
+  cursor:pointer;
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.pSlotBtn:hover{
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+}
+
+.pSlotBtn.active{
+  border-color: rgba(160,190,255,.50);
+  background: rgba(160,190,255,.16);
+  box-shadow: 0 0 0 4px rgba(160,190,255,.12);
+}
+
+.pMsg{
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.22);
+  color: rgba(255,255,255,.86);
+  font-size: 13px;
+}
+
+.pErr{
+  color: rgba(255,130,180,.92);
+  font-size: 12px;
+}
+
+.pMini{
+  color: rgba(255,255,255,.62);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ===== polish ===== */
+
+/* error ring */
+.pInput.err, .pSelect.err, .pText.err{
+  border-color: rgba(255,120,170,.55);
+  box-shadow: 0 0 0 4px rgba(255,120,170,.12);
+}
+
+/* sticky summary for Book right card */
+.pStickyTop{
+  position: sticky;
+  top: 86px; /* navbar(64) + 여백 */
+}
+
+/* toast */
+.pToastWrap{
+  position: fixed;
+  left: 50%;
+  top: 84px; /* navbar 아래 */
+  transform: translateX(-50%);
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.pToast{
+  width: min(520px, calc(100vw - 28px));
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(20,22,32,.78), rgba(10,12,20,.62));
+  backdrop-filter: blur(14px);
+  box-shadow: 0 30px 110px rgba(0,0,0,.62);
+  padding: 10px 12px;
+
+  display:flex;
+  align-items:flex-start;
+  gap: 10px;
+
+  animation: toastIn 180ms ease-out;
+}
+
+.pToastDot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-top: 6px;
+  flex: 0 0 auto;
+  background: rgba(160,190,255,.9);
+  box-shadow: 0 0 18px rgba(160,190,255,.45);
+}
+
+.pToastDot.err{
+  background: rgba(255,120,170,.92);
+  box-shadow: 0 0 18px rgba(255,120,170,.45);
+}
+
+.pToastTitle{
+  font-weight: 850;
+  font-size: 13px;
+  color: rgba(255,255,255,.92);
+}
+
+.pToastBody{
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255,255,255,.70);
+  line-height: 1.45;
+}
+
+.pToastOut{
+  animation: toastOut 160ms ease-in forwards;
+}
+
+@keyframes toastIn{
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastOut{
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-6px); }
+}

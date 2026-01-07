@@ -1,0 +1,295 @@
+/* src/styles/bookPremium.css */
+
+.bookWrap{
+  width: min(1120px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 26px 0 34px;
+}
+
+.bookHeader{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+  margin-bottom:16px;
+}
+
+.bookKicker{
+  font-size:11px;
+  letter-spacing:.18em;
+  font-weight:900;
+  color: rgba(255,255,255,.58);
+}
+
+.bookTitle{
+  margin: 6px 0 0;
+  font-size: 26px;
+  letter-spacing: -0.5px;
+  font-weight: 950;
+  color: rgba(255,255,255,.94);
+}
+
+.bookSub{
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: rgba(255,255,255,.65);
+}
+
+.bookMetaPills{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.bookPill{
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.78);
+  font-size: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.bookGrid{
+  display:grid;
+  grid-template-columns: 1.12fr .88fr;
+  gap: 14px;
+}
+
+@media (max-width: 980px){
+  .bookGrid{ grid-template-columns: 1fr; }
+}
+
+.bookCard{
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 20px;
+  background: rgba(255,255,255,.05);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 22px 70px rgba(0,0,0,.40);
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bookCard::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  background: radial-gradient(700px 180px at 10% 0%, rgba(255,255,255,.10), transparent 55%),
+              radial-gradient(420px 220px at 95% 10%, rgba(140,255,230,.08), transparent 60%);
+  pointer-events:none;
+}
+
+.bookCardHead{
+  position:relative;
+  z-index:1;
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom: 10px;
+}
+
+.bookCardTitle{
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  color: rgba(255,255,255,.92);
+}
+
+.bookCardHint{
+  font-size: 12px;
+  color: rgba(255,255,255,.60);
+}
+
+.bookFormRow{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns: 1.2fr .9fr .7fr;
+  gap: 10px;
+}
+
+@media (max-width: 740px){
+  .bookFormRow{ grid-template-columns: 1fr; }
+}
+
+.bookField{ display:grid; gap:6px; }
+.bookLabel{
+  font-size:12px;
+  color: rgba(255,255,255,.70);
+}
+
+.bookInput,
+.bookSelect,
+.bookTextarea{
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(12,18,32,.70);
+  color: rgba(255,255,255,.92);
+  outline: none;
+  padding: 10px 12px;
+}
+
+.bookSelect{
+  cursor:pointer;
+}
+
+.bookTextarea{
+  resize: vertical;
+  min-height: 120px;
+}
+
+.bookDivider{
+  height:1px;
+  background: rgba(255,255,255,.10);
+  margin: 12px 0;
+}
+
+.bookSlots{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 740px){
+  .bookSlots{ grid-template-columns: repeat(3, 1fr); }
+}
+
+.bookSlotBtn{
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.86);
+  padding: 12px 10px;
+  cursor:pointer;
+  font-weight: 850;
+  letter-spacing: .02em;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.bookSlotBtn:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,.10);
+  border-color: rgba(255,255,255,.20);
+}
+
+.bookSlotBtn.isSelected{
+  background: rgba(255,255,255,.90);
+  color: #0b0f18;
+  border-color: rgba(255,255,255,.35);
+}
+
+.bookEmpty{
+  grid-column: 1 / -1;
+  color: rgba(255,255,255,.70);
+  padding: 8px 2px;
+}
+
+.bookInfoBox{
+  position:relative;
+  z-index:1;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  padding: 12px;
+  color: rgba(255,255,255,.86);
+}
+
+.bookInfoTitle{
+  font-weight: 950;
+  letter-spacing: -0.2px;
+}
+
+.bookInfoLine{
+  margin-top: 8px;
+  font-size: 13px;
+  color: rgba(255,255,255,.78);
+}
+
+.bookInfoFoot{
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255,255,255,.62);
+}
+
+.bookSummary{
+  position:relative;
+  z-index:1;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  padding: 12px;
+}
+
+.bookSummaryLabel{
+  font-size: 12px;
+  color: rgba(255,255,255,.62);
+}
+
+.bookSummaryValue{
+  margin-top: 6px;
+  font-weight: 950;
+  color: rgba(255,255,255,.92);
+  letter-spacing: -0.2px;
+}
+
+.bookSummarySub{
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(255,255,255,.70);
+}
+
+.bookToggleRow{ margin-top: 10px; }
+.bookToggle{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color: rgba(255,255,255,.86);
+  font-weight: 800;
+}
+
+.bookPrimaryBtn{
+  position:relative;
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.92);
+  color: #0b0f18;
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-weight: 950;
+  cursor:pointer;
+  overflow:hidden;
+}
+
+.bookPrimaryBtn:disabled{
+  opacity: .7;
+  cursor:not-allowed;
+}
+
+.bookBtnSheen{
+  position:absolute;
+  inset:-2px;
+  background: radial-gradient(500px 140px at 20% 0%, rgba(255,255,255,.90), transparent 60%);
+  opacity:.35;
+  pointer-events:none;
+}
+
+.bookToast{
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.88);
+}
+
+.bookToast.isBad{
+  border-color: rgba(251,113,133,.30);
+  background: rgba(251,113,133,.12);
+}

@@ -1,16 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  BrowserRouter,
-  Link,
-  Outlet,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
+import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
 import { supabase } from "./lib/supabaseClient";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
+import Navbar from "./components/Navbar";
 
 import HomePage from "./pages/HomePage";
 import AuthPage from "./pages/AuthPage";
@@ -19,7 +12,6 @@ import BookPage from "./pages/BookPage";
 import AdminServicesPage from "./pages/admin/AdminServicesPage";
 import DebugPage from "./pages/DebugPage";
 
-// ✅ 관리자 운영(스케줄/예약/차단 탭 통합)
 import AdminOpsPage from "./pages/admin/AdminOpsPage";
 import AdminCalendarPage from "./pages/AdminCalendarPage";
 
@@ -38,85 +30,26 @@ async function fetchIsAdmin(uid: string): Promise<boolean> {
   return Boolean(data);
 }
 
-function AppLayout({
-  session,
-  isAuthed,
-}: {
-  session: SessionState;
-  isAuthed: boolean;
-}) {
-  const location = useLocation();
-  const isHome = location.pathname === "/";
-
+function AppLayout({ session, isAuthed }: { session: SessionState; isAuthed: boolean }) {
   return (
     <div className="appShell">
-      <header className="appHeader">
-        <div className="appHeaderInner">
-          <div className="appBrand">
-            <div className="appBrandMark" aria-hidden />
-            <div className="appBrandText">
-              <div className="appBrandName">정비소 운영 플랫폼</div>
-              <div className="appBrandSub">Metallic Showroom</div>
-            </div>
+      <Navbar isAuthed={isAuthed} isAdmin={session.isAdmin} />
+
+      {session.error ? (
+        <div className="appNotice">
+          <div className="appNoticeInner">
+            <span className="appNoticeDot" aria-hidden />
+            <span>오류: {session.error}</span>
           </div>
-
-          <nav className="appNav">
-            <Link className="appNavLink" to="/">
-              홈
-            </Link>
-            <Link className="appNavLink" to="/book">
-              예약
-            </Link>
-            <Link className="appNavLink" to="/onboarding">
-              프로필
-            </Link>
-
-            {session.isAdmin ? (
-              <>
-                <span className="appNavDivider" aria-hidden />
-                <Link className="appNavLink" to="/admin/services">
-                  관리자:아이템
-                </Link>
-                <Link className="appNavLink" to="/admin">
-                  관리자:운영
-                </Link>
-                <Link className="appNavLink" to="/admin/calendar">
-                  관리자:달력
-                </Link>
-              </>
-            ) : null}
-
-            <span className="appNavDivider" aria-hidden />
-            <Link className="appNavLink" to="/auth">
-              인증
-            </Link>
-            {isAuthed ? <LogoutButton /> : null}
-          </nav>
         </div>
+      ) : null}
 
-        {session.error ? (
-          <div className="appNotice">
-            <div className="appNoticeInner">
-              <span className="appNoticeDot" aria-hidden />
-              <span>오류: {session.error}</span>
-            </div>
-          </div>
-        ) : null}
-      </header>
-
-      <main className={isHome ? "appMain appMain--full" : "appMain appMain--contained"}>
+      {/* ✅ fixed navbar 높이만큼 아래로 내려서 어떤 페이지에서도 항상 보이게 */}
+      <main className="appMain appMain--full" style={{ paddingTop: 64 }}>
         <Outlet />
       </main>
 
-      <footer className="appFooter">
-        <div className="appFooterInner">
-          <span>© Car Service</span>
-          <span className="appFooterSep" aria-hidden>
-            ·
-          </span>
-          <span className="appFooterMuted">Supabase 기반 예약/운영 시스템</span>
-        </div>
-      </footer>
+      <footer className="appFooter">...</footer>
     </div>
   );
 }
@@ -270,21 +203,6 @@ function AppInner() {
         <Route path="/debug" element={<DebugPage />} />
       </Route>
     </Routes>
-  );
-}
-
-function LogoutButton() {
-  const navigate = useNavigate();
-  return (
-    <button
-      className="appNavBtn"
-      onClick={async () => {
-        await supabase.auth.signOut();
-        navigate("/auth");
-      }}
-    >
-      로그아웃
-    </button>
   );
 }
 

@@ -1,0 +1,207 @@
+/* ===== Premium Navbar ===== */
+.premiumNav{
+  /* ✅ sticky -> fixed (어떤 페이지가 풀스크린으로 덮어도 항상 최상단 고정) */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  z-index: 9999;
+
+  background: linear-gradient(
+    180deg,
+    rgba(10,14,22,.85),
+    rgba(10,14,22,.65)
+  );
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.premiumNavInner{
+  width: min(1120px, calc(100% - 48px));
+  margin: 0 auto;
+  height: 64px;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 16px;
+}
+
+/* 왼쪽 로고 */
+.navBrand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  text-decoration:none;
+  min-width: 220px;
+}
+
+.navBrand img{
+  height: 24px;
+  filter: grayscale(1) brightness(1.2) contrast(1.15);
+  opacity:.9;
+}
+
+.navBrandText{
+  display:flex;
+  flex-direction:column;
+  line-height:1.05;
+}
+
+.navBrandTitle{
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.14em;
+  color:rgba(255,255,255,.92);
+}
+
+.navBrandSub{
+  font-size:11px;
+  color:rgba(255,255,255,.45);
+}
+
+/* 가운데 메뉴 */
+.navMenu{
+  display:flex;
+  gap:22px;
+  justify-content:center;
+  flex: 1;
+}
+
+.navLink{
+  font-size:14px;
+  color:rgba(255,255,255,.65);
+  text-decoration:none;
+  position:relative;
+  padding: 6px 2px;
+}
+
+.navLink::after{
+  content:"";
+  position:absolute;
+  left:0;
+  bottom:-6px;
+  width:0;
+  height:1px;
+  background:rgba(255,255,255,.8);
+  transition: width 160ms ease;
+}
+
+.navLink:hover{
+  color:#fff;
+}
+.navLink:hover::after{
+  width:100%;
+}
+
+.navLink.active{
+  color: rgba(255,255,255,.92);
+}
+.navLink.active::after{
+  width:100%;
+  opacity:.55;
+}
+
+/* 오른쪽 액션 */
+.navActions{
+  display:flex;
+  gap:10px;
+  min-width: 220px;
+  justify-content:flex-end;
+  align-items:center;
+}
+
+/* SHOWROOM / ADMIN pill */
+.navPill{
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 11px;
+  letter-spacing: .10em;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  color: rgba(255,255,255,.70);
+  white-space: nowrap;
+}
+
+.navPill.admin{
+  border-color: rgba(255,120,120,.25);
+  background: rgba(255,120,120,.10);
+  color: rgba(255,210,210,.88);
+}
+
+/* 버튼/링크 공통 */
+.navBtn{
+  padding:8px 14px;
+  border-radius:999px;
+  font-size:13px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  text-decoration:none;
+
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+/* button reset */
+button.navBtn{
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.navBtn:disabled{
+  cursor: not-allowed;
+  opacity: .65;
+}
+
+.navBtn:hover{
+  transform: translateY(-1px);
+  background:rgba(255,255,255,.12);
+  border-color:rgba(255,255,255,.18);
+}
+
+.navBtn.primary{
+  background:rgba(255,255,255,.16);
+  border-color:rgba(255,255,255,.22);
+}
+
+.navBtn.primary:hover{
+  background:rgba(255,255,255,.20);
+  border-color:rgba(255,255,255,.28);
+}
+
+/* 모바일 */
+@media (max-width: 720px){
+  .premiumNavInner{ width: calc(100% - 28px); }
+  .navMenu{ display:none; }
+  .navBrand{ min-width: auto; }
+  .navBrandSub{ display:none; }
+  .navActions{ min-width: auto; }
+  .navPill{ display:none; }
+}
+
+.navDivider{
+  width: 1px;
+  height: 16px;
+  background: rgba(255,255,255,.16);
+  opacity: .8;
+}
+
+.navDivider{
+  width: 1px;
+  height: 16px;
+  background: rgba(255,255,255,.16);
+  opacity: .8;
+}
+
+.navAdminLink{
+  color: rgba(255,255,255,.72);
+  font-weight: 700;
+}
+.navAdminLink:hover{
+  color: #fff;
+}

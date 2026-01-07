@@ -5,6 +5,8 @@ import { adminListReservationsByDate, type AdminReservationItem } from "../lib/a
 import { adminListBlockedTimesByDate, type AdminBlockedTime } from "../lib/adminSchedule";
 import { supabase } from "../lib/supabaseClient";
 
+import "../styles/adminCalendarPremium.css";
+
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
@@ -55,6 +57,15 @@ type DragPayload = {
   hhmm: string; // 원래 시간(KST)
 };
 
+function cx(...xs: Array<string | false | null | undefined>) {
+  return xs.filter(Boolean).join(" ");
+}
+
+function clampText(v: any) {
+  if (v == null) return "";
+  return String(v).trim();
+}
+
 export default function AdminCalendarPage() {
   const navigate = useNavigate();
 
@@ -92,6 +103,7 @@ export default function AdminCalendarPage() {
     try {
       const dateStrs = days.map((d) => ymd(d));
 
+      // ✅ 병렬 호출(월 단위라 호출이 많으면 느릴 수 있음. 필요하면 나중에 RPC로 묶어 최적화)
       const results = await Promise.all(
         dateStrs.map(async (ds) => {
           const [r, b] = await Promise.all([adminListReservationsByDate(ds), adminListBlockedTimesByDate(ds)]);
@@ -121,18 +133,6 @@ export default function AdminCalendarPage() {
   }, [title]);
 
   const selected = map[selectedDateStr] ?? null;
-
-  const cellStyle: React.CSSProperties = {
-    border: "1px solid #e5e7eb",
-    borderRadius: 12,
-    padding: 10,
-    minHeight: 92,
-    cursor: "pointer",
-    background: "#fff",
-    display: "grid",
-    gap: 6,
-    alignContent: "start",
-  };
 
   function goToOps(dateStr: string, tab: "schedule" | "blocked", focusReservationId?: string) {
     const qs = new URLSearchParams();
@@ -179,43 +179,67 @@ export default function AdminCalendarPage() {
     return null;
   }
 
+  const monthStats = useMemo(() => {
+    const vals = Object.values(map);
+    const totalRes = vals.reduce((acc, s) => acc + (s.reservations?.length ?? 0), 0);
+    const totalBlk = vals.reduce((acc, s) => acc + (s.blocked?.length ?? 0), 0);
+    const busyDays = vals.filter((s) => (s.reservations?.length ?? 0) > 0).length;
+    return { totalRes, totalBlk, busyDays };
+  }, [map]);
+
   return (
-    <div style={{ maxWidth: 980, margin: "0 auto", padding: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => setCursor((d) => addMonths(d, -1))} style={{ padding: "8px 10px", cursor: "pointer" }}>
+    <div className="calShell">
+      <div className="calBg" aria-hidden />
+
+      {/* Top */}
+      <div className="calTop">
+        <div className="calTopLeft">
+          <button className="calIconBtn" onClick={() => setCursor((d) => addMonths(d, -1))} aria-label="이전 달">
             ◀
           </button>
-          <div style={{ fontWeight: 900, fontSize: 18 }}>{title} 달력</div>
-          <button onClick={() => setCursor((d) => addMonths(d, 1))} style={{ padding: "8px 10px", cursor: "pointer" }}>
+
+          <div className="calTitle">
+            <div className="calTitleMain">{title}</div>
+            <div className="calTitleSub">관리자 달력 · 드래그로 날짜 이동</div>
+          </div>
+
+          <button className="calIconBtn" onClick={() => setCursor((d) => addMonths(d, 1))} aria-label="다음 달">
             ▶
           </button>
         </div>
 
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button onClick={loadMonth} disabled={loading || saving} style={{ padding: "8px 10px", cursor: "pointer" }}>
+        <div className="calTopRight">
+          <div className="calChips">
+            <span className="calChip">예약 {monthStats.totalRes}</span>
+            <span className="calChip calChipOk">활성일 {monthStats.busyDays}</span>
+            <span className="calChip calChipDanger">차단 {monthStats.totalBlk}</span>
+          </div>
+
+          <button className="calBtn" onClick={loadMonth} disabled={loading || saving}>
             {loading ? "로딩..." : "새로고침"}
           </button>
-          {saving ? <span style={{ fontSize: 12, opacity: 0.75 }}>이동 반영중…</span> : null}
-          {msg ? <span style={{ color: "crimson" }}>{msg}</span> : null}
         </div>
       </div>
 
-      <div style={{ marginTop: 8, fontSize: 12, opacity: 0.75 }}>
+      <div className="calHint">
         드래그 드롭: 기본은 <b>기존 시간 유지</b>. <b>Shift</b> 누른 채로 드롭하면 <b>09:00 고정</b>.
+        {saving ? <span className="calSaving">이동 반영중…</span> : null}
+        {msg ? <span className="calMsg">{msg}</span> : null}
       </div>
 
-      <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
+      {/* Week header */}
+      <div className="calWeekHead">
         {WEEKDAYS.map((w) => (
-          <div key={w} style={{ fontWeight: 900, opacity: 0.8, padding: "0 4px" }}>
+          <div key={w} className={cx("calWeekName", w === "일" && "calSun", w === "토" && "calSat")}>
             {w}
           </div>
         ))}
       </div>
 
-      <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
+      {/* Grid */}
+      <div className="calGrid">
         {Array.from({ length: leadingEmpty }).map((_, i) => (
-          <div key={`empty-${i}`} />
+          <div key={`empty-${i}`} className="calCell calCellEmpty" />
         ))}
 
         {days.map((d) => {
@@ -233,6 +257,13 @@ export default function AdminCalendarPage() {
           return (
             <div
               key={ds}
+              className={cx(
+                "calCell",
+                isSelected && "isSelected",
+                isToday && "isToday",
+                hasBlocked && "hasBlocked",
+                isDragOver && "isDragOver"
+              )}
               onClick={() => setSelectedDateStr(ds)}
               onDragOver={(e) => {
                 if (!dragPayload) return;
@@ -248,7 +279,6 @@ export default function AdminCalendarPage() {
 
                 const p = dragPayload ?? readDragPayloadFromEvent(e);
                 setDragOverDate(null);
-
                 if (!p?.reservationId) return;
 
                 const hhmm = e.shiftKey ? "09:00" : p.hhmm;
@@ -267,39 +297,23 @@ export default function AdminCalendarPage() {
                   setDragPayload(null);
                 }
               }}
-              style={{
-                ...cellStyle,
-                border: isSelected ? "2px solid #111827" : "1px solid #e5e7eb",
-                boxShadow: isSelected ? "0 0 0 2px rgba(17,24,39,0.05)" : undefined,
-                background: hasBlocked ? "#fff1f2" : "#fff",
-                outline: isDragOver ? "2px solid #111827" : "none",
-                outlineOffset: -2,
-                opacity: saving ? 0.85 : 1,
-              }}
               title={ds}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                <div style={{ fontWeight: 900 }}>
+              <div className="calCellTop">
+                <div className="calDayNo">
                   {d.getDate()}
-                  {isToday ? <span style={{ marginLeft: 6, fontSize: 12, color: "#2563eb" }}>TODAY</span> : null}
+                  {isToday ? <span className="calTodayPill">TODAY</span> : null}
                 </div>
-                <div style={{ fontSize: 12, opacity: 0.6 }}>{ds}</div>
+                <div className="calDayMeta">{ds}</div>
               </div>
 
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 12 }}>
+              <div className="calBadges">
                 <button
                   type="button"
+                  className="calPill calPillInfo"
                   onClick={(e) => {
                     e.stopPropagation();
                     goToOpsSchedule(ds);
-                  }}
-                  style={{
-                    padding: "2px 8px",
-                    borderRadius: 999,
-                    border: "1px solid #dbeafe",
-                    background: "#eff6ff",
-                    cursor: "pointer",
-                    fontSize: 12,
                   }}
                   title="운영 스케줄(예약)로 이동"
                 >
@@ -308,17 +322,10 @@ export default function AdminCalendarPage() {
 
                 <button
                   type="button"
+                  className="calPill calPillDanger"
                   onClick={(e) => {
                     e.stopPropagation();
                     goToOpsBlocked(ds);
-                  }}
-                  style={{
-                    padding: "2px 8px",
-                    borderRadius: 999,
-                    border: "1px solid #fecaca",
-                    background: "#fff1f2",
-                    cursor: "pointer",
-                    fontSize: 12,
                   }}
                   title="차단 관리로 이동"
                 >
@@ -327,7 +334,7 @@ export default function AdminCalendarPage() {
               </div>
 
               {resCount > 0 ? (
-                <div style={{ fontSize: 12, opacity: 0.9 }}>
+                <div className="calList">
                   {s!.reservations.slice(0, 2).map((r) => {
                     const hhmm = kstHHmmFromIso(r.scheduled_at);
                     const isDragging = dragPayload?.reservationId === r.reservation_id;
@@ -335,6 +342,7 @@ export default function AdminCalendarPage() {
                     return (
                       <div
                         key={r.reservation_id}
+                        className={cx("calItem", isDragging && "isDragging")}
                         draggable={!saving}
                         onDragStart={(e) => {
                           if (saving) return;
@@ -359,124 +367,105 @@ export default function AdminCalendarPage() {
                           e.stopPropagation();
                           goToOpsSchedule(ds, r.reservation_id);
                         }}
-                        style={{
-                          display: "block",
-                          marginTop: 2,
-                          cursor: saving ? "default" : "grab",
-                          userSelect: "none",
-                          padding: "2px 0",
-                          color: "#111827",
-                          opacity: isDragging ? 0.6 : 1,
-                        }}
                         title={saving ? "이동 처리중…" : `드래그해서 이동 (기본 ${hhmm} 유지, Shift 드롭=09:00)`}
                       >
-                        • {r.service_name} ({r.status}){" "}
-                        <span style={{ fontSize: 11, opacity: 0.7 }}>{hhmm}</span>
+                        <span className="calBullet">•</span>
+                        <span className="calItemText">
+                          {r.service_name}
+                          <span className="calItemMeta">
+                            {" "}
+                            · {r.status} · {hhmm}
+                          </span>
+                        </span>
                       </div>
                     );
                   })}
-                  {resCount > 2 ? <div>…</div> : null}
+                  {resCount > 2 ? <div className="calMore">…</div> : null}
                 </div>
               ) : (
-                <div style={{ fontSize: 12, opacity: 0.55 }}>비어있음</div>
+                <div className="calEmpty">비어있음</div>
               )}
             </div>
           );
         })}
       </div>
 
-      <div style={{ marginTop: 14, border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
-        <div
-          style={{
-            background: "#f9fafb",
-            padding: 10,
-            fontWeight: 900,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
-          <div>{selectedDateStr} 상세</div>
-
-          <div style={{ display: "flex", gap: 8 }}>
-            <button type="button" onClick={() => goToOpsSchedule(selectedDateStr)} style={{ padding: "8px 10px", cursor: "pointer" }}>
+      {/* Detail Panel */}
+      <div className="calPanel">
+        <div className="calPanelHead">
+          <div className="calPanelTitle">{selectedDateStr} 상세</div>
+          <div className="calPanelActions">
+            <button type="button" className="calBtnGhost" onClick={() => goToOpsSchedule(selectedDateStr)}>
               운영 스케줄(예약) →
             </button>
           </div>
         </div>
 
-        <div style={{ padding: 12, display: "grid", gap: 14 }}>
-          <div>
-            <div style={{ fontWeight: 900, marginBottom: 8 }}>예약</div>
+        <div className="calPanelBody">
+          <section className="calSection">
+            <div className="calSectionHead">
+              <div className="calSectionTitle">예약</div>
+              <div className="calSectionSub">{selected?.reservations?.length ? `${selected.reservations.length}건` : "0건"}</div>
+            </div>
+
             {selected?.reservations?.length ? (
-              <div style={{ display: "grid", gap: 8 }}>
+              <div className="calCards">
                 {selected.reservations.map((r) => (
                   <button
                     key={r.reservation_id}
                     type="button"
+                    className="calCard"
                     onClick={() => goToOpsSchedule(selectedDateStr, r.reservation_id)}
-                    style={{
-                      border: "1px solid #e5e7eb",
-                      borderRadius: 12,
-                      padding: 10,
-                      background: "#fff",
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
                     title="운영 스케줄(예약)로 이동"
                   >
-                    <div style={{ fontWeight: 900 }}>
-                      {r.service_name} · {r.full_name ?? "-"} · {r.phone ?? "-"}
+                    <div className="calCardTitle">
+                      {r.service_name} <span className="calCardDot" aria-hidden>·</span>{" "}
+                      <span className="calCardName">{r.full_name ?? "-"}</span>
+                      <span className="calCardDot" aria-hidden>·</span> <span className="calCardPhone">{r.phone ?? "-"}</span>
                     </div>
-                    <div style={{ fontSize: 12, opacity: 0.8 }}>
-                      시작: {new Date(r.scheduled_at).toLocaleString("ko-KR")} · {r.duration_minutes}분 · 상태: {r.status}
+                    <div className="calCardSub">
+                      시작: {new Date(r.scheduled_at).toLocaleString("ko-KR")} · {r.duration_minutes}분 · 상태:{" "}
+                      <b>{r.status}</b>
                     </div>
                   </button>
                 ))}
               </div>
             ) : (
-              <div style={{ fontSize: 12, opacity: 0.65 }}>예약이 없습니다.</div>
+              <div className="calEmptyLine">예약이 없습니다.</div>
             )}
-          </div>
+          </section>
 
-          <div>
-            <div style={{ fontWeight: 900, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>차단</span>
-              <button type="button" onClick={() => goToOpsBlocked(selectedDateStr)} style={{ padding: "8px 10px", cursor: "pointer" }}>
+          <section className="calSection">
+            <div className="calSectionHead">
+              <div className="calSectionTitle">차단</div>
+              <button type="button" className="calBtnGhost" onClick={() => goToOpsBlocked(selectedDateStr)}>
                 차단 관리로 이동 →
               </button>
             </div>
 
             {selected?.blocked?.length ? (
-              <div style={{ display: "grid", gap: 8 }}>
+              <div className="calCards">
                 {selected.blocked.map((b) => (
                   <button
                     key={b.id}
                     type="button"
+                    className={cx("calCard", "calCardDanger")}
                     onClick={() => goToOpsBlocked(selectedDateStr)}
-                    style={{
-                      border: "1px solid #fecaca",
-                      borderRadius: 12,
-                      padding: 10,
-                      background: "#fff1f2",
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
                     title="차단 관리로 이동"
                   >
-                    <div style={{ fontWeight: 900 }}>
-                      ⛔ {new Date(b.start_at).toLocaleString("ko-KR")} ~ {new Date(b.end_at).toLocaleString("ko-KR")}
+                    <div className="calCardTitle">
+                      ⛔ {new Date(b.start_at).toLocaleString("ko-KR")}{" "}
+                      <span className="calCardDot" aria-hidden>·</span>{" "}
+                      {new Date(b.end_at).toLocaleString("ko-KR")}
                     </div>
-                    <div style={{ fontSize: 12, opacity: 0.8 }}>{b.reason ?? "-"}</div>
+                    <div className="calCardSub">{clampText(b.reason) || "-"}</div>
                   </button>
                 ))}
               </div>
             ) : (
-              <div style={{ fontSize: 12, opacity: 0.65 }}>차단이 없습니다.</div>
+              <div className="calEmptyLine">차단이 없습니다.</div>
             )}
-          </div>
+          </section>
         </div>
       </div>
     </div>

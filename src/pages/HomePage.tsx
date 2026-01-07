@@ -3,6 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import "../styles/homeShowroom.css";
 
+// ✅ 프리미엄 오버레이 스타일
+import "../styles/homeShowroomPremium.css";
+
+import Navbar from "../components/Navbar";
+
 type HomePageProps = {
   isAuthed: boolean;
   isAdmin: boolean;
@@ -112,7 +117,9 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
     data: null,
   });
 
-  const [slotSummary, setSlotSummary] = useState<LoadState<{ count: number; next: string | null; basisItemName: string | null }>>({
+  const [slotSummary, setSlotSummary] = useState<
+    LoadState<{ count: number; next: string | null; basisItemName: string | null }>
+  >({
     loading: true,
     error: null,
     data: null,
@@ -215,7 +222,11 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
         if (!alive) return;
 
         if (r.error) {
-          setSlotSummary({ loading: false, error: r.error.message, data: { count: 0, next: null, basisItemName: basis.name } });
+          setSlotSummary({
+            loading: false,
+            error: r.error.message,
+            data: { count: 0, next: null, basisItemName: basis.name },
+          });
           return;
         }
 
@@ -286,215 +297,211 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
   };
 
   return (
-    <div className="showroomSimple" ref={wrapRef}>
-      <div className="showroomBg" aria-hidden />
-      <div className="showroomNoise" aria-hidden />
-      <div className="showroomSpot" aria-hidden />
+    <>
+      <Navbar isAuthed={isAuthed} isAdmin={isAdmin} />
 
-      <section className="heroSimple">
-        <div className="heroInner">
-          {/* <div className="brandRow">
-            <div className="brandMark" aria-hidden />
-            <div className="brandText">
-              <div className="brandName">Car Service</div>
-              <div className="brandSub">Maintenance · Estimate · Schedule · Staff</div>
-            </div>
-            {isAdmin ? <div className="pill admin">ADMIN</div> : <div className="pill">SHOWROOM</div>}
-          </div> */}
+      <div className="showroomSimple" ref={wrapRef}>
+        <div className="showroomBg" aria-hidden />
+        <div className="showroomNoise" aria-hidden />
+        <div className="showroomSpot" aria-hidden />
 
-          <h1 className="heroTitle">
-            정비에만 집중하세요.
-            <br />
-            나머지는 시스템이 정리합니다.
-          </h1>
+        <section className="heroSimple">
+          <div className="heroInner premiumHero">
+            {/* (중복 제거) 브랜드바는 Navbar에서만 관리 */}
 
-          <p className="heroSub">
-            견적서, 정비 일정관리, 직원관리를
-            <br />
-            한 번에 할 수 있게 해드리겠습니다.
-          </p>
 
-          <div className="ctaRow">
-            <button className="btnPrimary" type="button" onClick={handleReserveClick}>
-              <span className="btnSheen" aria-hidden />
-              {isAuthed ? "예약하기" : "로그인하고 예약하기"}
-            </button>
+            <h1 className="heroTitle">
+              정비에만 집중하세요.
+              <br />
+              나머지는 시스템이 정리합니다.
+            </h1>
 
-            {isAuthed ? (
-              <Link className="btnGhost" to="/onboarding">
-                프로필
-              </Link>
-            ) : (
-              <Link className="btnGhost" to="/auth">
-                인증
-              </Link>
-            )}
+            <p className="heroSub">
+              견적서, 정비 일정관리, 직원관리를
+              <br />
+              한 번에 할 수 있게 해드리겠습니다.
+            </p>
 
-            {isAdmin ? (
-              <Link className="btnGhost" to="/admin">
-                관리자 운영
-              </Link>
-            ) : null}
-          </div>
-
-          {/* 오늘 운영 요약 */}
-          <div className="opsSummary">
-            <div className="opsBox">
-              <div className="opsLabel">오늘 운영</div>
-              <div className="opsValue">
-                {ops.loading ? (
-                  "불러오는 중…"
-                ) : opsInfo?.open && opsInfo?.close ? (
-                  <>
-                    {opsInfo.open} ~ {opsInfo.close}
-                  </>
-                ) : (
-                  "운영정보 없음"
-                )}
-              </div>
-              <div className="chipRow">
-                {opsInfo?.slot ? <span className="chip">{opsInfo.slot} 슬롯</span> : null}
-                {opsInfo?.capacity ? <span className="chip">{opsInfo.capacity}</span> : null}
-                {opsInfo?.maxBatch ? <span className="chip">{opsInfo.maxBatch}</span> : null}
-                {opsInfo?.tz ? <span className="chip">{opsInfo.tz}</span> : null}
-              </div>
-            </div>
-
-            <div className="opsBox">
-              <div className="opsLabel">오늘 요약</div>
-              <div className="opsValue">
-                {slotSummary.loading ? "불러오는 중…" : `${slotSummary.data?.count ?? 0} 슬롯`}
-              </div>
-
-              <div className="blocksMini">
-                <div className="muted">
-                  기준: {slotSummary.data?.basisItemName ?? "활성 아이템 없음"}
-                  {slotSummary.data?.next ? ` · 다음 ${fmtKST(slotSummary.data.next)}` : ""}
-                </div>
-
-                <div className="blockRow">
-                  <span className="blockTime">차단</span>
-                  <span className="blockReason">{blocks.loading ? "…" : `${blocksSummary.count}건`}</span>
-                </div>
-
-                {blocksSummary.count === 0 && !blocks.loading ? <div className="muted">오늘 차단 없음</div> : null}
-
-                {blocksSummary.top.map((b) => (
-                  <div className="blockRow" key={String(b.id)}>
-                    <span className="blockTime">
-                      {b.start}–{b.end}
-                    </span>
-                    <span className="blockReason">{b.reason}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {(items.error || ops.error || blocks.error) ? (
-            <div className="alertSimple">
-              <div className="alertTitle">데이터 로딩 이슈</div>
-              <div className="alertBody">
-                {items.error ? <div>service_items: {items.error}</div> : null}
-                {ops.error ? <div>ops_settings: {ops.error}</div> : null}
-                {blocks.error ? <div>blocked_times: {blocks.error}</div> : null}
-                {slotSummary.error ? <div>get_available_slots: {slotSummary.error}</div> : null}
-              </div>
-              <button className="btnGhost small" onClick={() => nav("/debug")}>
-                Debug
+            <div className="ctaRow">
+              <button className="btnPrimary" type="button" onClick={handleReserveClick}>
+                <span className="btnSheen" aria-hidden />
+                {isAuthed ? "예약하기" : "로그인하고 예약하기"}
               </button>
-            </div>
-          ) : null}
-        </div>
-      </section>
 
-      {/* 예약하기 버튼 눌렀을 때만 뜨는 아이템 선택 패널 */}
-      {pickerOpen ? (
-        <div className="modalBackdrop" role="dialog" aria-modal="true">
-          <div className="modalPanel">
-            <div className="modalHead">
-              <div>
-                <div className="modalTitle">정비 아이템 선택</div>
-                <div className="modalSub">선택 후 예약 화면으로 이동합니다.</div>
-              </div>
-              <button className="iconBtn" onClick={() => setPickerOpen(false)} aria-label="닫기">
-                ✕
-              </button>
-            </div>
+              {isAuthed ? (
+                <Link className="btnGhost" to="/onboarding">
+                  프로필
+                </Link>
+              ) : (
+                <Link className="btnGhost" to="/auth">
+                  인증
+                </Link>
+              )}
 
-            <div className="modalBody">
-              {items.loading ? <div className="muted">아이템 불러오는 중…</div> : null}
-
-              <div className="sectionMiniTitle">활성 아이템</div>
-              <div className="itemList">
-                {activeItems.map((it) => (
-                  <div className="itemRow" key={String(it.id)}>
-                    <div className="itemMain">
-                      <div className="itemName">{it.name}</div>
-                      <div className="itemDesc">{it.description ?? "설명 미설정"}</div>
-                      <div className="itemMeta">
-                        <span className="chip">{formatDuration(it)}</span>
-                      </div>
-                    </div>
-
-                    <div className="itemActions">
-                      <button className="btnPrimary small" onClick={() => goBookWithItem(String(it.id))}>
-                        <span className="btnSheen" aria-hidden />
-                        선택
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {!items.loading && activeItems.length === 0 ? <div className="muted">활성 아이템이 없습니다.</div> : null}
-              </div>
-
-              {inactiveItems.length > 0 ? (
-                <>
-                  <div className="sectionMiniTitle" style={{ marginTop: 14 }}>
-                    비활성 아이템
-                  </div>
-                  <div className="itemList">
-                    {inactiveItems.map((it) => (
-                      <div className="itemRow" key={String(it.id)}>
-                        <div className="itemMain">
-                          <div className="itemName">
-                            {it.name} <span className="tagOff">OFF</span>
-                          </div>
-                          <div className="itemDesc">{it.description ?? "설명 미설정"}</div>
-                          <div className="itemMeta">
-                            <span className="chip">{formatDuration(it)}</span>
-                          </div>
-                        </div>
-
-                        <div className="itemActions">
-                          <button className="btnPrimary small" disabled title="비활성화된 아이템입니다">
-                            <span className="btnSheen" aria-hidden />
-                            선택
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </>
+              {isAdmin ? (
+                <Link className="btnGhost" to="/admin">
+                  관리자 운영
+                </Link>
               ) : null}
             </div>
 
-            <div className="modalFoot">
-              <div className="muted">
-                * 선택 시 <code>service_item_id</code>를 쿼리로 전달합니다.
+            {/* 오늘 운영 요약 */}
+            <div className="opsSummary">
+              <div className="opsBox">
+                <div className="opsLabel">오늘 운영</div>
+                <div className="opsValue">
+                  {ops.loading ? (
+                    "불러오는 중…"
+                  ) : opsInfo?.open && opsInfo?.close ? (
+                    <>
+                      {opsInfo.open} ~ {opsInfo.close}
+                    </>
+                  ) : (
+                    "운영정보 없음"
+                  )}
+                </div>
+                <div className="chipRow">
+                  {opsInfo?.slot ? <span className="chip">{opsInfo.slot} 슬롯</span> : null}
+                  {opsInfo?.capacity ? <span className="chip">{opsInfo.capacity}</span> : null}
+                  {opsInfo?.maxBatch ? <span className="chip">{opsInfo.maxBatch}</span> : null}
+                  {opsInfo?.tz ? <span className="chip">{opsInfo.tz}</span> : null}
+                </div>
               </div>
-              <div className="footBtns">
-                <button className="btnGhost small" onClick={() => setPickerOpen(false)}>
-                  닫기
+
+              <div className="opsBox">
+                <div className="opsLabel">오늘 요약</div>
+                <div className="opsValue">{slotSummary.loading ? "불러오는 중…" : `${slotSummary.data?.count ?? 0} 슬롯`}</div>
+
+                <div className="blocksMini">
+                  <div className="muted">
+                    기준: {slotSummary.data?.basisItemName ?? "활성 아이템 없음"}
+                    {slotSummary.data?.next ? ` · 다음 ${fmtKST(slotSummary.data.next)}` : ""}
+                  </div>
+
+                  <div className="blockRow">
+                    <span className="blockTime">차단</span>
+                    <span className="blockReason">{blocks.loading ? "…" : `${blocksSummary.count}건`}</span>
+                  </div>
+
+                  {blocksSummary.count === 0 && !blocks.loading ? <div className="muted">오늘 차단 없음</div> : null}
+
+                  {blocksSummary.top.map((b) => (
+                    <div className="blockRow" key={String(b.id)}>
+                      <span className="blockTime">
+                        {b.start}–{b.end}
+                      </span>
+                      <span className="blockReason">{b.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {items.error || ops.error || blocks.error ? (
+              <div className="alertSimple">
+                <div className="alertTitle">데이터 로딩 이슈</div>
+                <div className="alertBody">
+                  {items.error ? <div>service_items: {items.error}</div> : null}
+                  {ops.error ? <div>ops_settings: {ops.error}</div> : null}
+                  {blocks.error ? <div>blocked_times: {blocks.error}</div> : null}
+                  {slotSummary.error ? <div>get_available_slots: {slotSummary.error}</div> : null}
+                </div>
+                <button className="btnGhost small" onClick={() => nav("/debug")}>
+                  Debug
                 </button>
-                <Link className="btnGhost small" to="/book" onClick={() => setPickerOpen(false)}>
-                  그냥 예약 화면으로
-                </Link>
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        {/* 예약하기 버튼 눌렀을 때만 뜨는 아이템 선택 패널 */}
+        {pickerOpen ? (
+          <div className="modalBackdrop" role="dialog" aria-modal="true">
+            <div className="modalPanel">
+              <div className="modalHead">
+                <div>
+                  <div className="modalTitle">정비 아이템 선택</div>
+                  <div className="modalSub">선택 후 예약 화면으로 이동합니다.</div>
+                </div>
+                <button className="iconBtn" onClick={() => setPickerOpen(false)} aria-label="닫기">
+                  ✕
+                </button>
+              </div>
+
+              <div className="modalBody">
+                {items.loading ? <div className="muted">아이템 불러오는 중…</div> : null}
+
+                <div className="sectionMiniTitle">활성 아이템</div>
+                <div className="itemList">
+                  {activeItems.map((it) => (
+                    <div className="itemRow" key={String(it.id)}>
+                      <div className="itemMain">
+                        <div className="itemName">{it.name}</div>
+                        <div className="itemDesc">{it.description ?? "설명 미설정"}</div>
+                        <div className="itemMeta">
+                          <span className="chip">{formatDuration(it)}</span>
+                        </div>
+                      </div>
+
+                      <div className="itemActions">
+                        <button className="btnPrimary small" onClick={() => goBookWithItem(String(it.id))}>
+                          <span className="btnSheen" aria-hidden />
+                          선택
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {!items.loading && activeItems.length === 0 ? <div className="muted">활성 아이템이 없습니다.</div> : null}
+                </div>
+
+                {inactiveItems.length > 0 ? (
+                  <>
+                    <div className="sectionMiniTitle" style={{ marginTop: 14 }}>
+                      비활성 아이템
+                    </div>
+                    <div className="itemList">
+                      {inactiveItems.map((it) => (
+                        <div className="itemRow" key={String(it.id)}>
+                          <div className="itemMain">
+                            <div className="itemName">
+                              {it.name} <span className="tagOff">OFF</span>
+                            </div>
+                            <div className="itemDesc">{it.description ?? "설명 미설정"}</div>
+                            <div className="itemMeta">
+                              <span className="chip">{formatDuration(it)}</span>
+                            </div>
+                          </div>
+
+                          <div className="itemActions">
+                            <button className="btnPrimary small" disabled title="비활성화된 아이템입니다">
+                              <span className="btnSheen" aria-hidden />
+                              선택
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+
+              <div className="modalFoot">
+                <div className="muted">
+                  * 선택 시 <code>service_item_id</code>를 쿼리로 전달합니다.
+                </div>
+                <div className="footBtns">
+                  <button className="btnGhost small" onClick={() => setPickerOpen(false)}>
+                    닫기
+                  </button>
+                  <Link className="btnGhost small" to="/book" onClick={() => setPickerOpen(false)}>
+                    그냥 예약 화면으로
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ) : null}
-    </div>
+        ) : null}
+      </div>
+    </>
   );
 }

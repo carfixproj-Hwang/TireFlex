@@ -1,0 +1,227 @@
+:root{
+  --bg0:#0b0f17;
+  --bg1:#0f1624;
+  --line:rgba(255,255,255,.08);
+  --line2:rgba(255,255,255,.12);
+  --text:rgba(255,255,255,.92);
+  --muted:rgba(255,255,255,.62);
+  --muted2:rgba(255,255,255,.44);
+  --card:rgba(255,255,255,.04);
+  --card2:rgba(255,255,255,.06);
+  --shadow: 0 20px 60px rgba(0,0,0,.55);
+  --shadow2: 0 10px 30px rgba(0,0,0,.35);
+  --r: 18px;
+}
+
+/* ====== 전체 컨테이너: 가독성/폭 고정 ====== */
+.showroomSimple{
+  color: var(--text);
+  background: linear-gradient(180deg, var(--bg0), var(--bg1));
+  min-height: 100vh;
+}
+
+.heroSimple{
+  padding: 34px 0 30px;
+}
+
+.heroInner{
+  width: min(1120px, calc(100% - 48px));
+  margin: 0 auto;
+  position: relative;
+}
+
+/* ====== 배경: "띠" 제거하고 라디얼 2개만 ====== */
+.showroomBg{
+  background:
+    radial-gradient(900px 420px at 10% 20%, rgba(120,160,255,.18), transparent 55%),
+    radial-gradient(700px 380px at 80% 30%, rgba(255,230,120,.10), transparent 60%),
+    radial-gradient(900px 520px at 55% 115%, rgba(255,255,255,.06), transparent 65%);
+  filter: saturate(1.05);
+}
+
+.showroomNoise{
+  opacity: .05; /* 과하면 지저분해짐 */
+}
+
+.showroomSpot{ display:none; } /* 현재 스팟 라이트가 촌스러움 */
+
+/* ====== 브랜드바: 좌측 로고/타이틀 + 우측 메뉴 한 줄 ====== */
+.premiumBrandRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom: 28px;
+}
+
+.premiumLogoLink{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.03);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  text-decoration:none;
+  box-shadow: var(--shadow2);
+}
+
+.premiumLogoFrame{ display:none; } /* 프레임 하이라이트 제거(구림) */
+
+.premiumLogoImg{
+  height: 28px;
+  width:auto;
+  display:block;
+  /* “고급” = 무채색 + 대비만 살짝 */
+  filter: grayscale(1) brightness(1.2) contrast(1.15);
+  opacity: .92;
+}
+
+.premiumWordmarkTop{
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .16em;
+  color: var(--text);
+}
+.premiumWordmarkSub{
+  font-size: 11px;
+  color: var(--muted2);
+}
+
+/* ====== 히어로 타이포: 여기서 급이 갈림 ====== */
+.heroTitle{
+  font-size: clamp(40px, 4.6vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 8px 0 14px;
+}
+
+.heroSub{
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+  margin: 0 0 22px;
+  max-width: 520px;
+}
+
+/* 워터마크: “로고 전체” 말고, 아주 희미한 형태만 */
+.premiumHero::after{
+  content:"";
+  position:absolute;
+  right:-30px;
+  top:40px;
+  width: 520px;
+  height: 220px;
+  background-image: url("../assets/tireflex-logo.png");
+  background-repeat:no-repeat;
+  background-size:contain;
+  background-position:right top;
+  opacity: .045;               /* 핵심: 더 줄임 */
+  filter: grayscale(1) blur(.2px) contrast(1.1);
+  pointer-events:none;
+}
+
+/* ====== 버튼: 한 톤 + 얇은 라인 ====== */
+.ctaRow{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin-bottom: 26px;
+}
+
+.btnPrimary{
+  border-radius: 999px;
+  padding: 12px 16px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.10);
+  color: var(--text);
+  box-shadow: var(--shadow2);
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.btnPrimary:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,.14);
+  border-color: rgba(255,255,255,.18);
+}
+
+.btnGhost{
+  border-radius: 999px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.btnGhost:hover{
+  background: rgba(255,255,255,.06);
+  border-color: var(--line2);
+}
+
+.btnSheen{ display:none; } /* 번쩍 효과 제거(촌스러움) */
+
+/* ====== 카드: 동일한 룩으로 통일 ====== */
+.opsSummary{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.opsBox{
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--card), rgba(255,255,255,.02));
+  box-shadow: var(--shadow2);
+  padding: 16px 16px 14px;
+}
+
+.opsLabel{
+  color: var(--muted2);
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.opsValue{
+  font-size: 20px;
+  font-weight: 720;
+  margin-bottom: 10px;
+}
+
+.chipRow{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.chip{
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* 블록 요약 텍스트 정리 */
+.blocksMini .muted{ color: var(--muted2); }
+.blockRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.blockTime{ color: var(--muted2); }
+.blockReason{ color: var(--text); }
+
+/* ====== 반응형 ====== */
+@media (max-width: 900px){
+  .opsSummary{ grid-template-columns: 1fr; }
+  .premiumHero::after{ opacity:.03; right:-60px; }
+}
