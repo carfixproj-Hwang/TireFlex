@@ -58,7 +58,7 @@ export default function Navbar({ isAuthed, isAdmin }: Props) {
             </button>
           ) : (
             <Link to="/auth" className="navBtn primary">
-              인증
+              로그인
             </Link>
           )}
         </div>

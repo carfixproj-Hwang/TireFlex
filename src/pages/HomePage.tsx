@@ -263,9 +263,9 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
       open: formatTimeHHMM(d.open_time),
       close: formatTimeHHMM(d.close_time),
       slot: d.slot_minutes != null ? `${d.slot_minutes}분` : null,
-      capacity: d.capacity != null ? `동시 ${d.capacity}대` : null,
+      capacity: d.capacity != null ? `동시 작업 ${d.capacity}대` : null,
       tz: d.tz ? String(d.tz) : "Asia/Seoul",
-      maxBatch: d.max_batch_qty != null ? `1회 최대 ${d.max_batch_qty}개` : null,
+      maxBatch: d.max_batch_qty != null ? `리프트 개수 ${d.max_batch_qty}개` : null,
     };
   }, [ops.data]);
 
@@ -311,15 +311,18 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
 
 
             <h1 className="heroTitle">
-              정비에만 집중하세요.
               <br />
-              나머지는 시스템이 정리합니다.
+              정직한 서비스와, 합리적인 가격으로
+              <br />
+              고객님의 차량을 케어합니다.
             </h1>
 
             <p className="heroSub">
-              견적서, 정비 일정관리, 직원관리를
+              타이어 플렉스가 함께합니다.
               <br />
-              한 번에 할 수 있게 해드리겠습니다.
+              타이어교체 및 경정비, 기타 문의 031-355-0018
+              <br />
+              <br />
             </p>
 
             <div className="ctaRow">
@@ -334,7 +337,7 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
                 </Link>
               ) : (
                 <Link className="btnGhost" to="/auth">
-                  인증
+                  로그인
                 </Link>
               )}
 
@@ -348,7 +351,7 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
             {/* 오늘 운영 요약 */}
             <div className="opsSummary">
               <div className="opsBox">
-                <div className="opsLabel">오늘 운영</div>
+                <div className="opsLabel">영업 시간</div>
                 <div className="opsValue">
                   {ops.loading ? (
                     "불러오는 중…"
@@ -369,8 +372,8 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
               </div>
 
               <div className="opsBox">
-                <div className="opsLabel">오늘 요약</div>
-                <div className="opsValue">{slotSummary.loading ? "불러오는 중…" : `${slotSummary.data?.count ?? 0} 슬롯`}</div>
+                <div className="opsLabel">작업 가능 타임 확인</div>
+                <div className="opsValue">{slotSummary.loading ? "불러오는 중…" : `${slotSummary.data?.count ?? 0} 타임 가능`}</div>
 
                 <div className="blocksMini">
                   <div className="muted">
@@ -379,11 +382,11 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
                   </div>
 
                   <div className="blockRow">
-                    <span className="blockTime">차단</span>
+                    <span className="blockTime">휴식 타임</span>
                     <span className="blockReason">{blocks.loading ? "…" : `${blocksSummary.count}건`}</span>
                   </div>
 
-                  {blocksSummary.count === 0 && !blocks.loading ? <div className="muted">오늘 차단 없음</div> : null}
+                  {blocksSummary.count === 0 && !blocks.loading ? <div className="muted">오늘 휴무 없음</div> : null}
 
                   {blocksSummary.top.map((b) => (
                     <div className="blockRow" key={String(b.id)}>
