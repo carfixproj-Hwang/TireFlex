@@ -5,11 +5,11 @@ import "../../styles/adminPeoplePremium.css";
 
 type RoleFilter = "all" | "owner" | "staff" | "member";
 
-const ROLE_LABEL: Record<Exclude<RoleFilter, "all">, string> = {
-  owner: "최고관리자",
-  staff: "직원",
-  member: "일반회원",
-};
+// const ROLE_LABEL: Record<Exclude<RoleFilter, "all">, string> = {
+//   owner: "최고관리자",
+//   staff: "직원",
+//   member: "일반회원",
+// };
 
 function rolePillClass(role: AdminUserRow["role"]) {
   if (role === "owner") return "admRolePill admRoleOwner";

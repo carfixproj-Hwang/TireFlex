@@ -32,7 +32,7 @@ type SessionState = {
   loading: boolean;
   userId: string | null;
   role: AppRole;
-  isAdmin: boolean; // staff || owner
+  isAdmin: boolean;
   error: string | null;
 };
 
@@ -63,7 +63,6 @@ async function fetchRoleFast(): Promise<AppRole> {
     return r === "owner" || r === "staff" || r === "member" ? (r as AppRole) : "member";
   })();
 
-  // ✅ role RPC가 느리거나 걸려도 화면/리다이렉트는 먼저 진행
   return withTimeout(p, 1200, "member");
 }
 
@@ -79,7 +78,7 @@ function AppLayout({
 }) {
   return (
     <div className="appShell">
-      <Navbar isAuthed={isAuthed} isAdmin={session.isAdmin} />
+      <Navbar isAuthed={isAuthed} isAdmin={session.isAdmin} role={session.role} />
 
       {session.error && (
         <div className="appNotice">
@@ -114,26 +113,23 @@ function AppInner() {
   useEffect(() => {
     let mounted = true;
 
-    // ✅ 부팅 화면 너무 오래 방치 방지(메시지 띄우기보다 로딩을 먼저 끝내고 role은 뒤에서)
     const bootTimer = setTimeout(() => {
       if (!mounted) return;
-      setSession((prev) =>
-        prev.loading ? { ...prev, loading: false, error: prev.error } : prev
-      );
+      setSession((prev) => (prev.loading ? { ...prev, loading: false } : prev));
     }, 1500);
 
     const applyRoleAsync = async (uid: string) => {
       const role = await fetchRoleFast();
       if (!mounted) return;
-      setSession((prev) => {
-        // uid가 바뀐 상태면 업데이트하지 않음
-        if (prev.userId !== uid) return prev;
-        return {
-          ...prev,
-          role,
-          isAdmin: role === "owner" || role === "staff",
-        };
-      });
+      setSession((prev) =>
+        prev.userId !== uid
+          ? prev
+          : {
+              ...prev,
+              role,
+              isAdmin: role === "owner" || role === "staff",
+            }
+      );
     };
 
     const loadSession = async () => {
@@ -154,7 +150,6 @@ function AppInner() {
 
         const uid = data.session?.user?.id ?? null;
 
-        // ✅ 1) 세션은 즉시 반영 (여기서 role 기다리지 않음)
         setSession({
           loading: false,
           userId: uid,
@@ -163,7 +158,6 @@ function AppInner() {
           error: null,
         });
 
-        // ✅ 2) role은 뒤에서 업데이트
         if (uid) applyRoleAsync(uid);
       } catch (e: any) {
         if (!mounted) return;
@@ -182,7 +176,6 @@ function AppInner() {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       const uid = s?.user?.id ?? null;
 
-      // ✅ 이벤트에서도 동일: 먼저 세션 반영 → role 나중 반영
       setSession({
         loading: false,
         userId: uid,
@@ -249,7 +242,6 @@ function AppInner() {
           }
         />
 
-        {/* 관리자 (staff + owner) */}
         <Route
           path="/admin/services"
           element={
@@ -277,7 +269,6 @@ function AppInner() {
           }
         />
 
-        {/* 회원 관리 (staff/owner) */}
         <Route
           path="/admin/users"
           element={
@@ -287,7 +278,6 @@ function AppInner() {
           }
         />
 
-        {/* 직원 관리 (owner only) */}
         <Route
           path="/admin/staff"
           element={
@@ -297,7 +287,6 @@ function AppInner() {
           }
         />
 
-        {/* 최고관리자 전용 */}
         <Route
           path="/owner/staff"
           element={
