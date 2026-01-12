@@ -10,9 +10,9 @@ function trim(v: string) {
   return (v ?? "").trim();
 }
 
-function cx(...xs: Array<string | false | null | undefined>) {
-  return xs.filter(Boolean).join(" ");
-}
+// function cx(...xs: Array<string | false | null | undefined>) {
+//   return xs.filter(Boolean).join(" ");
+// }
 
 export default function AuthPage() {
   const nav = useNavigate();
