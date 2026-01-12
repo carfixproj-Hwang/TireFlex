@@ -7,7 +7,7 @@ import "../styles/homeShowroom.css";
 // ✅ 프리미엄 오버레이 스타일
 import "../styles/homeShowroomPremium.css";
 
-import Navbar from "../components/Navbar";
+// import Navbar from "../components/Navbar";
 
 type HomePageProps = {
   isAuthed: boolean;
