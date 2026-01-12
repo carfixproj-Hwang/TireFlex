@@ -50,16 +50,10 @@ async function fetchRole(): Promise<AppRole> {
 /* ======================
    Layout
 ====================== */
-function AppLayout({
-  session,
-  isAuthed,
-}: {
-  session: SessionState;
-  isAuthed: boolean;
-}) {
+function AppLayout({ session, isAuthed }: { session: SessionState; isAuthed: boolean }) {
   return (
     <div className="appShell">
-      <Navbar isAuthed={isAuthed} isAdmin={session.isAdmin} />
+      <Navbar isAuthed={isAuthed} isAdmin={session.isAdmin} role={session.role} />
 
       {session.error && (
         <div className="appNotice">

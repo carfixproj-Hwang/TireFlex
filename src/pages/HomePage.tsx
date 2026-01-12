@@ -349,7 +349,7 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
 
   return (
     <>
-      <Navbar isAuthed={isAuthed} isAdmin={isAdmin} />
+      {/* <Navbar isAuthed={isAuthed} isAdmin={isAdmin} /> */}
 
       <div className="showroomSimple" ref={wrapRef}>
         <div className="showroomBg" aria-hidden />
