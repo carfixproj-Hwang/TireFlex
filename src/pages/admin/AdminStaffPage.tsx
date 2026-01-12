@@ -1,6 +1,13 @@
 // src/pages/admin/AdminStaffPage.tsx
-import { useEffect, useMemo, useState } from "react";
-import { adminListUsers, ownerSetUserRole, type AdminUserRow, type AppRole } from "../../lib/adminUsers";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  adminListUsers,
+  ownerSetUserRole,
+  type AdminUserRow,
+  type AppRole,
+} from "../../lib/adminUsers";
+import { supabase } from "../../lib/supabaseClient";
+import "../../styles/adminPeoplePremium.css";
 
 function roleLabel(r: AppRole) {
   return r === "owner" ? "최고관리자" : r === "staff" ? "직원" : "일반회원";
@@ -11,13 +18,24 @@ export default function AdminStaffPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [rows, setRows] = useState<AdminUserRow[]>([]);
+  const [myUid, setMyUid] = useState<string | null>(null);
+  const [actingId, setActingId] = useState<string | null>(null);
+
+  // ✅ FIX: React 18 StrictMode에서 useEffect 2번 실행 방지
+  const didInit = useRef(false);
 
   async function load() {
+    // ✅ FIX: 중복 호출 방지
+    if (loading) return;
+
     setLoading(true);
     setMsg(null);
     try {
-      const list = await adminListUsers({ q: q.trim() ? q.trim() : undefined, limit: 300 });
-      setRows(list);
+      const list = await adminListUsers({
+        q: q.trim() ? q.trim() : undefined,
+        limit: 300,
+      });
+      setRows(list ?? []);
     } catch (e: any) {
       setMsg(e?.message ?? String(e));
       setRows([]);
@@ -27,178 +45,210 @@ export default function AdminStaffPage() {
   }
 
   useEffect(() => {
+    // ✅ FIX: 최초 1회만 실행
+    if (didInit.current) return;
+    didInit.current = true;
+
+    let mounted = true;
+
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!mounted) return;
+      setMyUid(data.user?.id ?? null);
+    })();
+
     load();
+
+    return () => {
+      mounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const owners = useMemo(() => rows.filter((r) => r.role === "owner"), [rows]);
   const staff = useMemo(() => rows.filter((r) => r.role === "staff"), [rows]);
   const members = useMemo(() => rows.filter((r) => r.role === "member"), [rows]);
 
   async function setRole(userId: string, next: AppRole) {
-    const ok = confirm(`권한을 "${roleLabel(next)}"로 변경할까요?\n되돌릴 수는 있지만 운영 권한이 즉시 변경됩니다.`);
+    if (myUid && userId === myUid && next !== "owner") {
+      alert("내 계정의 owner 권한을 하향할 수 없습니다.");
+      return;
+    }
+
+    const ok = confirm(
+      `권한을 "${roleLabel(next)}"로 변경할까요?\n되돌릴 수는 있지만 운영 권한이 즉시 변경됩니다.`
+    );
     if (!ok) return;
 
     try {
-      setLoading(true);
+      setActingId(userId);
+      setMsg(null);
       await ownerSetUserRole(userId, next);
       await load();
     } catch (e: any) {
       alert(e?.message ?? String(e));
     } finally {
-      setLoading(false);
+      setActingId(null);
     }
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+    <div className="admPeopleShell">
+      <div className="admPeopleBg" aria-hidden />
+
+      <div className="admPeopleTop">
         <div>
-          <h2 style={{ margin: 0 }}>직원 관리 (최고관리자 전용)</h2>
-          <div style={{ fontSize: 13, opacity: 0.7, marginTop: 6 }}>일반회원을 직원으로 승격하거나, 직원 권한을 해제합니다.</div>
+          <h2 className="admPeopleTitle">직원 관리 (최고관리자 전용)</h2>
+          <div className="admPeopleSub">
+            일반회원을 직원으로 승격하거나, 직원 권한을 해제합니다.
+          </div>
         </div>
 
         <button
+          className="admBtnPrimary"
           onClick={load}
-          disabled={loading}
-          style={{
-            padding: "10px 14px",
-            borderRadius: 12,
-            border: "1px solid rgba(0,0,0,0.12)",
-            background: "#111827",
-            color: "#fff",
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
+          disabled={loading || !!actingId}
         >
           {loading ? "불러오는 중..." : "새로고침"}
         </button>
       </div>
 
-      <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="이메일 / 이름 / 전화번호"
+      <div className="admPeopleGlass">
+        <div className="admPeopleBar">
+          <div className="admPeopleControls">
+            <div className="admField" style={{ minWidth: 340, maxWidth: "100%" }}>
+              <div className="admLabel">검색</div>
+              <input
+                className="admInput"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="이메일 / 이름 / 전화번호"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") load();
+                }}
+              />
+            </div>
+
+            <button
+              className="admBtn"
+              onClick={load}
+              disabled={loading || !!actingId}
+            >
+              검색
+            </button>
+          </div>
+
+          <div className="admChips">
+            <span className="admChip">Owner {owners.length}</span>
+            <span className="admChip">Staff {staff.length}</span>
+            <span className="admChip admChipOk">
+              Member {members.length}
+            </span>
+            {actingId ? (
+              <span className="admChip admChipWarn">적용중…</span>
+            ) : null}
+          </div>
+        </div>
+
+        {msg ? <div className="admMsg">{msg}</div> : null}
+
+        <div
           style={{
-            flex: 1,
-            minWidth: 240,
-            padding: "12px 12px",
-            borderRadius: 12,
-            border: "1px solid #e5e7eb",
-            outline: "none",
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") load();
-          }}
-        />
-        <button
-          onClick={load}
-          disabled={loading}
-          style={{
-            padding: "12px 14px",
-            borderRadius: 12,
-            border: "1px solid rgba(0,0,0,0.12)",
-            background: "#fff",
-            fontWeight: 900,
-            cursor: "pointer",
+            padding: 12,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 12,
           }}
         >
-          검색
-        </button>
-      </div>
-
-      {msg ? <div style={{ marginTop: 10, color: "crimson" }}>{msg}</div> : null}
-
-      <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <section style={{ border: "1px solid #e5e7eb", borderRadius: 16, padding: 12, background: "#fff" }}>
-          <div style={{ fontWeight: 900, marginBottom: 10 }}>직원 ({staff.length})</div>
-
-          <div style={{ display: "grid", gap: 10 }}>
-            {staff.map((u) => (
-              <div
-                key={u.user_id}
-                style={{
-                  border: "1px solid #eef2f7",
-                  borderRadius: 14,
-                  padding: 12,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  alignItems: "center",
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {u.full_name ?? "(이름없음)"} <span style={{ opacity: 0.6 }}>· {u.email ?? "-"}</span>
-                  </div>
-                  <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>전화: {u.phone ?? "-"} | 차종: {u.car_model ?? "-"}</div>
-                </div>
-
-                <button
-                  onClick={() => setRole(u.user_id, "member")}
-                  disabled={loading}
-                  style={{
-                    padding: "10px 12px",
-                    borderRadius: 12,
-                    border: "1px solid rgba(220,38,38,0.25)",
-                    background: "rgba(220,38,38,0.08)",
-                    fontWeight: 900,
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  직원 해제
-                </button>
+          {/* Staff */}
+          <section className="admCard">
+            <div className="admCardHeader">
+              <div>
+                직원 <span>({staff.length})</span>
               </div>
-            ))}
-            {!loading && staff.length === 0 ? <div style={{ opacity: 0.7 }}>직원이 없습니다.</div> : null}
-          </div>
-        </section>
+              <span className="admChip">해제 가능</span>
+            </div>
 
-        <section style={{ border: "1px solid #e5e7eb", borderRadius: 16, padding: 12, background: "#fff" }}>
-          <div style={{ fontWeight: 900, marginBottom: 10 }}>일반회원 ({members.length})</div>
+            <div className="admList">
+              {staff.map((u) => {
+                const busy = actingId === u.user_id;
+                return (
+                  <div key={u.user_id} className="admRow">
+                    <div>
+                      <div className="admRowTitle">
+                        {u.full_name ?? "(이름없음)"} · {u.email ?? "-"}
+                      </div>
+                      <div className="admRowSub">
+                        전화: {u.phone ?? "-"} · 차종: {u.car_model ?? "-"}
+                      </div>
+                    </div>
 
-          <div style={{ display: "grid", gap: 10 }}>
-            {members.map((u) => (
-              <div
-                key={u.user_id}
-                style={{
-                  border: "1px solid #eef2f7",
-                  borderRadius: 14,
-                  padding: 12,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  alignItems: "center",
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 900, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {u.full_name ?? "(이름없음)"} <span style={{ opacity: 0.6 }}>· {u.email ?? "-"}</span>
+                    <button
+                      className="admBtnDanger"
+                      onClick={() => setRole(u.user_id, "member")}
+                      disabled={loading || !!actingId || busy}
+                    >
+                      {busy ? "처리중..." : "직원 해제"}
+                    </button>
                   </div>
-                  <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>전화: {u.phone ?? "-"} | 차종: {u.car_model ?? "-"}</div>
-                </div>
+                );
+              })}
+              {!loading && staff.length === 0 && (
+                <div className="admEmpty">직원이 없습니다.</div>
+              )}
+            </div>
+          </section>
 
-                <button
-                  onClick={() => setRole(u.user_id, "staff")}
-                  disabled={loading}
-                  style={{
-                    padding: "10px 12px",
-                    borderRadius: 12,
-                    border: "1px solid rgba(59,130,246,0.25)",
-                    background: "rgba(59,130,246,0.10)",
-                    fontWeight: 900,
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  직원 승격
-                </button>
+          {/* Members */}
+          <section className="admCard">
+            <div className="admCardHeader">
+              <div>
+                일반회원 <span>({members.length})</span>
               </div>
-            ))}
-            {!loading && members.length === 0 ? <div style={{ opacity: 0.7 }}>일반회원이 없습니다.</div> : null}
-          </div>
-        </section>
+              <span className="admChip admChipOk">승격 가능</span>
+            </div>
+
+            <div className="admList">
+              {members.map((u) => {
+                const busy = actingId === u.user_id;
+                return (
+                  <div key={u.user_id} className="admRow">
+                    <div>
+                      <div className="admRowTitle">
+                        {u.full_name ?? "(이름없음)"} · {u.email ?? "-"}
+                      </div>
+                      <div className="admRowSub">
+                        전화: {u.phone ?? "-"} · 차종: {u.car_model ?? "-"}
+                      </div>
+                    </div>
+
+                    <button
+                      className="admBtn"
+                      onClick={() => setRole(u.user_id, "staff")}
+                      disabled={loading || !!actingId || busy}
+                    >
+                      {busy ? "처리중..." : "직원 승격"}
+                    </button>
+                  </div>
+                );
+              })}
+              {!loading && members.length === 0 && (
+                <div className="admEmpty">일반회원이 없습니다.</div>
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* mobile */}
+        <style>
+          {`
+            @media (max-width: 980px) {
+              .admPeopleGlass > div[style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
+              }
+            }
+          `}
+        </style>
       </div>
     </div>
   );

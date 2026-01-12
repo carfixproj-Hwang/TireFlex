@@ -1,0 +1,403 @@
+/* src/styles/adminPeoplePremium.css */
+
+.admPeopleShell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+.admPeopleBg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(900px 420px at 18% 8%, rgba(255,255,255,0.10), transparent 60%),
+    radial-gradient(800px 420px at 82% 12%, rgba(255,255,255,0.07), transparent 62%),
+    linear-gradient(180deg, #0b1220, #070b14);
+}
+
+.admPeopleTop {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.admPeopleTitle {
+  margin: 0;
+  color: rgba(255,255,255,0.94);
+  font-weight: 950;
+  letter-spacing: -0.6px;
+}
+
+.admPeopleSub {
+  margin-top: 6px;
+  font-size: 13px;
+  opacity: 0.78;
+  color: rgba(255,255,255,0.88);
+}
+
+.admPeopleGlass {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+  overflow: hidden;
+}
+
+.admPeopleBar {
+  padding: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+}
+
+.admPeopleControls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.admField {
+  display: grid;
+  gap: 6px;
+}
+
+.admLabel {
+  font-size: 12px;
+  opacity: 0.78;
+  color: rgba(255,255,255,0.90);
+}
+
+.admInput, .admSelect {
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(12,18,32,0.75);
+  color: rgba(255,255,255,0.92);
+  outline: none;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.28);
+  min-width: 220px;
+}
+
+.admSelect {
+  background: rgba(12,18,32,0.92);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.admSelectWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.admSelectArrow {
+  position: absolute;
+  right: 12px;
+  pointer-events: none;
+  opacity: 0.9;
+  color: rgba(255,255,255,0.88);
+}
+
+.admBtn {
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admBtnPrimary {
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.92);
+  color: #0b0f18;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 16px 34px rgba(0,0,0,0.35);
+}
+
+.admBtnDanger {
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(251,113,133,0.35);
+  background: rgba(251,113,133,0.14);
+  color: rgba(255,255,255,0.92);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.admBtn:disabled, .admBtnPrimary:disabled, .admBtnDanger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admChips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.admChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: -0.2px;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.92);
+  background: rgba(255,255,255,0.06);
+  white-space: nowrap;
+}
+
+.admChipOk {
+  border: 1px solid rgba(110,231,183,0.28);
+  background: rgba(110,231,183,0.10);
+}
+
+.admChipWarn {
+  border: 1px solid rgba(251,191,36,0.28);
+  background: rgba(251,191,36,0.10);
+}
+
+.admChipDanger {
+  border: 1px solid rgba(251,113,133,0.30);
+  background: rgba(251,113,133,0.12);
+}
+
+.admMsg {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+  color: #ffb4c0;
+  font-weight: 900;
+}
+
+.admList {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.admRowBtn {
+  text-align: left;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  padding: 12px;
+  cursor: pointer;
+  box-shadow: 0 14px 34px rgba(0,0,0,0.30);
+}
+
+.admRowBtn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.admRowTop {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.admRowTitle {
+  font-weight: 950;
+  font-size: 15px;
+  letter-spacing: -0.3px;
+  min-width: 0;
+}
+
+.admRowMuted {
+  opacity: 0.75;
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admRowSub {
+  margin-top: 6px;
+  font-size: 13px;
+  opacity: 0.88;
+}
+
+.admMono {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.78;
+  font-family: ui-monospace, Menlo, monospace;
+  word-break: break-all;
+}
+
+.admRolePill {
+  display: inline-flex;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-weight: 950;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+}
+
+.admRoleOwner {
+  border: 1px solid rgba(251,191,36,0.30);
+  background: rgba(251,191,36,0.10);
+}
+
+.admRoleStaff {
+  border: 1px solid rgba(96,165,250,0.30);
+  background: rgba(96,165,250,0.10);
+}
+
+.admRoleMember {
+  border: 1px solid rgba(110,231,183,0.28);
+  background: rgba(110,231,183,0.10);
+}
+
+.admTableWrap {
+  overflow-x: auto;
+}
+
+.admTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+  min-width: 780px;
+}
+
+.admTh {
+  text-align: left;
+  font-size: 12px;
+  padding: 12px 12px;
+  color: rgba(255,255,255,0.92);
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+  white-space: nowrap;
+}
+
+.admTd {
+  padding: 12px 12px;
+  color: rgba(255,255,255,0.92);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.admHint {
+  margin-top: 12px;
+  font-size: 12px;
+  opacity: 0.82;
+  color: rgba(255,255,255,0.88);
+}
+
+/* Modal */
+.admModalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 50;
+}
+
+.admModal {
+  width: min(720px, 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(10,14,24,0.92);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.55);
+  overflow: hidden;
+}
+
+.admModalHead {
+  padding: 12px 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+}
+
+.admModalTitle {
+  font-weight: 950;
+  color: rgba(255,255,255,0.94);
+  letter-spacing: -0.4px;
+}
+
+.admModalSub {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.78;
+  color: rgba(255,255,255,0.88);
+}
+
+.admIconBtn {
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  border-radius: 12px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 950;
+}
+
+.admModalBody {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.admKV {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
+}
+
+.admK {
+  font-size: 12px;
+  opacity: 0.78;
+  color: rgba(255,255,255,0.90);
+}
+
+.admV {
+  color: rgba(255,255,255,0.92);
+  font-weight: 800;
+  word-break: break-word;
+}
+
+.admModalFoot {
+  padding: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+}

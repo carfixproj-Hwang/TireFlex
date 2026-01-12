@@ -37,23 +37,49 @@ type SessionState = {
 };
 
 /* ======================
+   Utils
+====================== */
+function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return new Promise((resolve) => {
+    const t = setTimeout(() => resolve(fallback), ms);
+    p.then((v) => {
+      clearTimeout(t);
+      resolve(v);
+    }).catch(() => {
+      clearTimeout(t);
+      resolve(fallback);
+    });
+  });
+}
+
+/* ======================
    RPC helpers
 ====================== */
-async function fetchRole(): Promise<AppRole> {
-  const { data, error } = await supabase.rpc("get_my_role");
-  if (error) return "member";
+async function fetchRoleFast(): Promise<AppRole> {
+  const p = (async () => {
+    const { data, error } = await supabase.rpc("get_my_role");
+    if (error) return "member";
+    const r = String(data ?? "member");
+    return r === "owner" || r === "staff" || r === "member" ? (r as AppRole) : "member";
+  })();
 
-  const r = String(data ?? "member");
-  return r === "owner" || r === "staff" || r === "member" ? r : "member";
+  // ✅ role RPC가 느리거나 걸려도 화면/리다이렉트는 먼저 진행
+  return withTimeout(p, 1200, "member");
 }
 
 /* ======================
    Layout
 ====================== */
-function AppLayout({ session, isAuthed }: { session: SessionState; isAuthed: boolean }) {
+function AppLayout({
+  session,
+  isAuthed,
+}: {
+  session: SessionState;
+  isAuthed: boolean;
+}) {
   return (
     <div className="appShell">
-      <Navbar isAuthed={isAuthed} isAdmin={session.isAdmin} role={session.role} />
+      <Navbar isAuthed={isAuthed} isAdmin={session.isAdmin} />
 
       {session.error && (
         <div className="appNotice">
@@ -88,18 +114,27 @@ function AppInner() {
   useEffect(() => {
     let mounted = true;
 
-    const timeout = setTimeout(() => {
+    // ✅ 부팅 화면 너무 오래 방치 방지(메시지 띄우기보다 로딩을 먼저 끝내고 role은 뒤에서)
+    const bootTimer = setTimeout(() => {
       if (!mounted) return;
       setSession((prev) =>
-        prev.loading
-          ? {
-              ...prev,
-              loading: false,
-              error: prev.error ?? "세션 로딩이 지연됩니다.",
-            }
-          : prev
+        prev.loading ? { ...prev, loading: false, error: prev.error } : prev
       );
-    }, 4000);
+    }, 1500);
+
+    const applyRoleAsync = async (uid: string) => {
+      const role = await fetchRoleFast();
+      if (!mounted) return;
+      setSession((prev) => {
+        // uid가 바뀐 상태면 업데이트하지 않음
+        if (prev.userId !== uid) return prev;
+        return {
+          ...prev,
+          role,
+          isAdmin: role === "owner" || role === "staff",
+        };
+      });
+    };
 
     const loadSession = async () => {
       try {
@@ -118,20 +153,18 @@ function AppInner() {
         }
 
         const uid = data.session?.user?.id ?? null;
-        let role: AppRole = "member";
 
-        if (uid) {
-          role = await fetchRole();
-        }
-
-        if (!mounted) return;
+        // ✅ 1) 세션은 즉시 반영 (여기서 role 기다리지 않음)
         setSession({
           loading: false,
           userId: uid,
-          role,
-          isAdmin: role === "owner" || role === "staff",
+          role: "member",
+          isAdmin: false,
           error: null,
         });
+
+        // ✅ 2) role은 뒤에서 업데이트
+        if (uid) applyRoleAsync(uid);
       } catch (e: any) {
         if (!mounted) return;
         setSession({
@@ -146,27 +179,24 @@ function AppInner() {
 
     loadSession();
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       const uid = s?.user?.id ?? null;
-      let role: AppRole = "member";
 
-      if (uid) {
-        role = await fetchRole();
-      }
-
-      if (!mounted) return;
+      // ✅ 이벤트에서도 동일: 먼저 세션 반영 → role 나중 반영
       setSession({
         loading: false,
         userId: uid,
-        role,
-        isAdmin: role === "owner" || role === "staff",
+        role: "member",
+        isAdmin: false,
         error: null,
       });
+
+      if (uid) applyRoleAsync(uid);
     });
 
     return () => {
       mounted = false;
-      clearTimeout(timeout);
+      clearTimeout(bootTimer);
       sub.subscription.unsubscribe();
     };
   }, []);

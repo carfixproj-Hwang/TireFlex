@@ -1,27 +1,36 @@
 // src/pages/admin/AdminUsersPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { adminListUsers, type AdminUserRow } from "../../lib/adminUsers";
+import "../../styles/adminPeoplePremium.css";
 
-const cardStyle: React.CSSProperties = {
-  border: "1px solid rgba(0,0,0,0.08)",
-  borderRadius: 16,
-  background: "#fff",
-  boxShadow: "0 10px 28px rgba(0,0,0,0.06)",
+type RoleFilter = "all" | "owner" | "staff" | "member";
+
+const ROLE_LABEL: Record<Exclude<RoleFilter, "all">, string> = {
+  owner: "최고관리자",
+  staff: "직원",
+  member: "일반회원",
 };
+
+function rolePillClass(role: AdminUserRow["role"]) {
+  if (role === "owner") return "admRolePill admRoleOwner";
+  if (role === "staff") return "admRolePill admRoleStaff";
+  return "admRolePill admRoleMember";
+}
 
 export default function AdminUsersPage() {
   const [q, setQ] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | "owner" | "staff" | "member">("all");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [rows, setRows] = useState<AdminUserRow[]>([]);
+  const [selected, setSelected] = useState<AdminUserRow | null>(null);
 
   async function load() {
     setLoading(true);
     setMsg(null);
     try {
       const list = await adminListUsers({ q: q.trim() ? q.trim() : undefined, limit: 300 });
-      setRows(list);
+      setRows(list ?? []);
     } catch (e: any) {
       setMsg(e?.message ?? String(e));
       setRows([]);
@@ -38,145 +47,184 @@ export default function AdminUsersPage() {
   const filtered = useMemo(() => {
     let list = rows;
     if (roleFilter !== "all") list = list.filter((r) => r.role === roleFilter);
-    return list;
+
+    // 보기 좋은 정렬: owner → staff → member, 최신 가입 먼저
+    const rank = (role: string) => (role === "owner" ? 0 : role === "staff" ? 1 : 2);
+    return [...list].sort((a, b) => {
+      const ra = rank(a.role);
+      const rb = rank(b.role);
+      if (ra !== rb) return ra - rb;
+      const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return tb - ta;
+    });
   }, [rows, roleFilter]);
 
+  const stats = useMemo(() => {
+    const total = rows.length;
+    const owners = rows.filter((r) => r.role === "owner").length;
+    const staff = rows.filter((r) => r.role === "staff").length;
+    const members = rows.filter((r) => r.role === "member").length;
+    return { total, owners, staff, members };
+  }, [rows]);
+
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+    <div className="admPeopleShell">
+      <div className="admPeopleBg" aria-hidden />
+
+      <div className="admPeopleTop">
         <div>
-          <h2 style={{ margin: 0 }}>회원 관리</h2>
-          <div style={{ fontSize: 13, opacity: 0.7, marginTop: 6 }}>검색으로 회원을 찾고, 권한 현황을 확인합니다.</div>
+          <h2 className="admPeopleTitle">회원 관리</h2>
+          <div className="admPeopleSub">검색으로 회원을 찾고, 권한/프로필을 확인합니다.</div>
         </div>
 
-        <button
-          onClick={load}
-          disabled={loading}
-          style={{
-            padding: "10px 14px",
-            borderRadius: 12,
-            border: "1px solid rgba(0,0,0,0.12)",
-            background: "#111827",
-            color: "#fff",
-            fontWeight: 900,
-            cursor: "pointer",
-          }}
-        >
+        <button className="admBtnPrimary" onClick={load} disabled={loading}>
           {loading ? "불러오는 중..." : "새로고침"}
         </button>
       </div>
 
-      <div style={{ ...cardStyle, marginTop: 12, padding: 12 }}>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>검색</div>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="이메일 / 이름 / 전화번호"
-              style={{
-                width: "100%",
-                padding: "12px 12px",
-                borderRadius: 12,
-                border: "1px solid #e5e7eb",
-                outline: "none",
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") load();
-              }}
-            />
-          </div>
+      <div className="admPeopleGlass">
+        <div className="admPeopleBar">
+          <div className="admPeopleControls">
+            <div className="admField" style={{ minWidth: 320, maxWidth: "100%" }}>
+              <div className="admLabel">검색</div>
+              <input
+                className="admInput"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="이메일 / 이름 / 전화번호"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") load();
+                }}
+              />
+            </div>
 
-          <div style={{ minWidth: 200 }}>
-            <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>권한 필터</div>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as any)}
-              style={{
-                width: "100%",
-                padding: "12px 12px",
-                borderRadius: 12,
-                border: "1px solid #e5e7eb",
-                background: "#fff",
-                color: "#111827",
-                outline: "none",
-              }}
-            >
-              <option value="all">전체</option>
-              <option value="owner">최고관리자</option>
-              <option value="staff">직원</option>
-              <option value="member">일반회원</option>
-            </select>
-          </div>
-
-          <button
-            onClick={load}
-            disabled={loading}
-            style={{
-              padding: "12px 14px",
-              borderRadius: 12,
-              border: "1px solid rgba(0,0,0,0.12)",
-              background: "#fff",
-              fontWeight: 900,
-              cursor: "pointer",
-              height: 46,
-              alignSelf: "end",
-            }}
-          >
-            검색
-          </button>
-        </div>
-
-        {msg ? <div style={{ marginTop: 10, color: "crimson" }}>{msg}</div> : null}
-
-        <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-          {filtered.map((u) => (
-            <div
-              key={u.user_id}
-              style={{
-                border: "1px solid #eef2f7",
-                borderRadius: 14,
-                padding: 12,
-                display: "grid",
-                gridTemplateColumns: "1fr 200px",
-                gap: 10,
-                alignItems: "center",
-              }}
-            >
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: 900, fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {u.full_name ?? "(이름없음)"} <span style={{ opacity: 0.6, fontWeight: 700 }}>· {u.email ?? "-"}</span>
-                </div>
-                <div style={{ marginTop: 6, fontSize: 13, opacity: 0.85 }}>
-                  전화: {u.phone ?? "-"} | 차종: {u.car_model ?? "-"}
-                </div>
-                <div style={{ marginTop: 6, fontSize: 12, opacity: 0.7 }}>
-                  가입: {u.created_at ? new Date(u.created_at).toLocaleString("ko-KR") : "-"} | ID:{" "}
-                  <span style={{ fontFamily: "ui-monospace, Menlo, monospace" }}>{u.user_id}</span>
-                </div>
-              </div>
-
-              <div style={{ textAlign: "right" }}>
-                <span
-                  style={{
-                    display: "inline-flex",
-                    padding: "8px 10px",
-                    borderRadius: 999,
-                    fontWeight: 900,
-                    border: "1px solid rgba(0,0,0,0.10)",
-                    background:
-                      u.role === "owner" ? "rgba(17,24,39,0.10)" : u.role === "staff" ? "rgba(59,130,246,0.10)" : "rgba(16,185,129,0.10)",
-                  }}
-                >
-                  {u.role === "owner" ? "최고관리자" : u.role === "staff" ? "직원" : "일반회원"}
+            <div className="admField">
+              <div className="admLabel">권한 필터</div>
+              <div className="admSelectWrap">
+                <select className="admSelect" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as RoleFilter)}>
+                  <option value="all">전체</option>
+                  <option value="owner">최고관리자</option>
+                  <option value="staff">직원</option>
+                  <option value="member">일반회원</option>
+                </select>
+                <span className="admSelectArrow" aria-hidden>
+                  ▾
                 </span>
               </div>
             </div>
+
+            <button className="admBtn" onClick={load} disabled={loading}>
+              검색
+            </button>
+          </div>
+
+          <div className="admChips">
+            <span className="admChip">전체 {stats.total}</span>
+            <span className="admChip admChipWarn">Owner {stats.owners}</span>
+            <span className="admChip">Staff {stats.staff}</span>
+            <span className="admChip admChipOk">Member {stats.members}</span>
+          </div>
+        </div>
+
+        {msg ? <div className="admMsg">{msg}</div> : null}
+
+        <div className="admList">
+          {filtered.map((u) => (
+            <button key={u.user_id} type="button" className="admRowBtn" onClick={() => setSelected(u)} title="클릭해서 상세 보기">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div className="admRowTop">
+                    <div className="admRowTitle">
+                      {u.full_name ?? "(이름없음)"}{" "}
+                      <span className="admRowMuted">· {u.email ?? "-"}</span>
+                    </div>
+                  </div>
+                  <div className="admRowSub">전화: {u.phone ?? "-"} · 차종: {u.car_model ?? "-"}</div>
+                  <div className="admMono">
+                    가입: {u.created_at ? new Date(u.created_at).toLocaleString("ko-KR") : "-"} · ID: {u.user_id}
+                  </div>
+                </div>
+
+                <span className={rolePillClass(u.role)}>
+                  {u.role === "owner" ? "최고관리자" : u.role === "staff" ? "직원" : "일반회원"}
+                </span>
+              </div>
+            </button>
           ))}
 
-          {!loading && filtered.length === 0 ? <div style={{ opacity: 0.7 }}>표시할 회원이 없습니다.</div> : null}
+          {!loading && filtered.length === 0 ? (
+            <div style={{ opacity: 0.8, color: "rgba(255,255,255,0.88)" }}>표시할 회원이 없습니다.</div>
+          ) : null}
         </div>
       </div>
+
+      {/* Detail Modal */}
+      {selected ? (
+        <div
+          className="admModalBackdrop"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setSelected(null);
+          }}
+        >
+          <div className="admModal">
+            <div className="admModalHead">
+              <div>
+                <div className="admModalTitle">회원 상세</div>
+                <div className="admModalSub">개인정보는 관리자 화면에서만 확인 가능하게 유지하세요.</div>
+              </div>
+              <button className="admIconBtn" onClick={() => setSelected(null)} aria-label="닫기">
+                ✕
+              </button>
+            </div>
+
+            <div className="admModalBody">
+              <div className="admKV">
+                <div className="admK">이름</div>
+                <div className="admV">{selected.full_name ?? "-"}</div>
+              </div>
+              <div className="admKV">
+                <div className="admK">이메일</div>
+                <div className="admV">{selected.email ?? "-"}</div>
+              </div>
+              <div className="admKV">
+                <div className="admK">전화</div>
+                <div className="admV">{selected.phone ?? "-"}</div>
+              </div>
+              <div className="admKV">
+                <div className="admK">차종</div>
+                <div className="admV">{selected.car_model ?? "-"}</div>
+              </div>
+              <div className="admKV">
+                <div className="admK">권한</div>
+                <div className="admV">
+                  <span className={rolePillClass(selected.role)}>
+                    {selected.role === "owner" ? "최고관리자" : selected.role === "staff" ? "직원" : "일반회원"}
+                  </span>
+                </div>
+              </div>
+              <div className="admKV">
+                <div className="admK">가입일</div>
+                <div className="admV">{selected.created_at ? new Date(selected.created_at).toLocaleString("ko-KR") : "-"}</div>
+              </div>
+              <div className="admKV">
+                <div className="admK">User ID</div>
+                <div className="admV" style={{ fontFamily: "ui-monospace, Menlo, monospace" }}>
+                  {selected.user_id}
+                </div>
+              </div>
+            </div>
+
+            <div className="admModalFoot">
+              <button className="admBtn" onClick={() => setSelected(null)}>
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
