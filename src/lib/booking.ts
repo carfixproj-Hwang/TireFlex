@@ -103,7 +103,11 @@ export async function getIsAdmin(): Promise<boolean> {
 }
 
 export async function listActiveServiceItems(): Promise<ServiceItem[]> {
-  const { data, error } = await supabase.from("service_items").select("*").eq("active", true).order("name", { ascending: true });
+  const { data, error } = await supabase
+    .from("service_items")
+    .select("*")
+    .eq("active", true)
+    .order("name", { ascending: true });
   if (error) throw new Error(error.message);
   return (data ?? []) as ServiceItem[];
 }
@@ -148,6 +152,13 @@ export async function updateServiceItemAdmin(
 ) {
   const { error } = await supabase.from("service_items").update(patch as any).eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+/** ✅ 추가 병합: 서비스 아이템 삭제(관리자) */
+export async function deleteServiceItemAdmin(id: string): Promise<boolean> {
+  const { error } = await supabase.from("service_items").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return true;
 }
 
 /**

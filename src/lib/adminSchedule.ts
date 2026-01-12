@@ -13,7 +13,6 @@ export type AdminReservationItem = {
   duration_minutes: number;
   status: string;
 
-  // ✅ 추가 컬럼(있으면 내려옴)
   quantity?: number;
   assigned_admin_id?: string | null;
   assigned_admin_label?: string | null;
@@ -58,6 +57,16 @@ export async function adminCreateBlockedTime(startAtIso: string, endAtIso: strin
 
 export async function adminDeleteBlockedTime(blockId: string) {
   const { data, error } = await supabase.rpc("admin_delete_blocked_time", { block_id: blockId });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+// ✅ 추가: 예약 상태 변경 (AdminTimelinePage 빌드 에러 해결)
+export async function adminSetReservationStatus(resId: string, status: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("admin_set_reservation_status", {
+    res_id: resId,
+    new_status: status,
+  });
   if (error) throw error;
   return Boolean(data);
 }

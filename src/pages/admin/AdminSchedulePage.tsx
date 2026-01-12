@@ -159,13 +159,7 @@ function SelectField({
   };
   return (
     <div style={wrap}>
-      <select
-        aria-label={ariaLabel}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        style={select}
-      >
+      <select aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} style={select}>
         {children}
       </select>
       <span style={arrow} aria-hidden>
@@ -515,9 +509,16 @@ export default function AdminSchedulePage() {
     return blocked.some((bt) => overlaps(bt.start_at, bt.end_at, candStart, candEnd));
   }
 
+  // ✅ 병합 수정: 멀티데이 예약 겹침 판정은 computeDayBasedWindow로 통일
   function isOverlappingOtherReservations(resId: string, candStart: string, candEnd: string) {
     return reservations.some((x) => {
       if (x.reservation_id === resId) return false;
+
+      if (isDayBased(x.duration_minutes)) {
+        const w = computeDayBasedWindow(x.scheduled_at, x.duration_minutes);
+        return overlaps(w.start, w.end, candStart, candEnd);
+      }
+
       const xStart = x.scheduled_at;
       const xEnd = addMinutesIso(x.scheduled_at, x.duration_minutes);
       return overlaps(xStart, xEnd, candStart, candEnd);
@@ -623,15 +624,14 @@ export default function AdminSchedulePage() {
           <div style={styles.controlRow}>
             <div style={{ display: "grid", gap: 6 }}>
               <div style={styles.label}>날짜</div>
-              <input
-                type="date"
-                value={dateStr}
-                onChange={(e) => setDateStr(e.target.value)}
-                style={styles.input}
-              />
+              <input type="date" value={dateStr} onChange={(e) => setDateStr(e.target.value)} style={styles.input} />
             </div>
 
-            <button onClick={refresh} disabled={loading} style={{ ...styles.btnPrimary, opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}>
+            <button
+              onClick={refresh}
+              disabled={loading}
+              style={{ ...styles.btnPrimary, opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}
+            >
               {loading ? "새로고침..." : "새로고침"}
             </button>
 
@@ -661,8 +661,8 @@ export default function AdminSchedulePage() {
           const rowBg = isBlocked
             ? "linear-gradient(180deg, rgba(251,113,133,0.10), rgba(255,255,255,0.02))"
             : hasRes
-              ? "linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02))"
-              : "rgba(255,255,255,0.02)";
+            ? "linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02))"
+            : "rgba(255,255,255,0.02)";
 
           const rowOutline = isDragOver ? "2px solid rgba(255,255,255,0.85)" : "1px solid transparent";
 
@@ -711,12 +711,8 @@ export default function AdminSchedulePage() {
                       const isActive = r.reservation_id === activeResId;
                       const draggableOk = !saving && !isDayBased(r.duration_minutes);
 
-                      const assignedLabel = r.assigned_admin_id
-                        ? adminLabelById.get(r.assigned_admin_id) ?? r.assigned_admin_id
-                        : null;
-                      const completedLabel = r.completed_admin_id
-                        ? adminLabelById.get(r.completed_admin_id) ?? r.completed_admin_id
-                        : null;
+                      const assignedLabel = r.assigned_admin_id ? adminLabelById.get(r.assigned_admin_id) ?? r.assigned_admin_id : null;
+                      const completedLabel = r.completed_admin_id ? adminLabelById.get(r.completed_admin_id) ?? r.completed_admin_id : null;
 
                       const assigned = assignedLabel ? `배정:${assignedLabel}` : "미배정";
                       const completed = completedLabel ? `완료:${completedLabel}` : "";
@@ -781,10 +777,7 @@ export default function AdminSchedulePage() {
         <div style={styles.panel}>
           <div style={styles.panelHead}>
             <div>예약 관리</div>
-            <button
-              onClick={() => setActiveResId(null)}
-              style={{ ...styles.btn, background: "rgba(255,255,255,0.06)" }}
-            >
+            <button onClick={() => setActiveResId(null)} style={{ ...styles.btn, background: "rgba(255,255,255,0.06)" }}>
               닫기
             </button>
           </div>
@@ -802,8 +795,7 @@ export default function AdminSchedulePage() {
                 시작(원본): {fmtKst(activeRes.scheduled_at)} · 상태: <b>{STATUS_LABEL[activeRes.status] ?? activeRes.status}</b>
               </div>
               <div style={styles.mono}>
-                배정: <b>{activeAssignedLabel}</b> · 완료: <b>{activeCompletedLabel}</b>{" "}
-                {activeRes.completed_at ? `(${fmtKst(activeRes.completed_at)})` : ""}
+                배정: <b>{activeAssignedLabel}</b> · 완료: <b>{activeCompletedLabel}</b> {activeRes.completed_at ? `(${fmtKst(activeRes.completed_at)})` : ""}
               </div>
             </div>
 
@@ -811,12 +803,7 @@ export default function AdminSchedulePage() {
               {/* ✅ 상태 */}
               <div style={{ display: "grid", gap: 6 }}>
                 <div style={{ fontSize: 12, opacity: 0.78, color: "rgba(255,255,255,0.90)" }}>상태</div>
-                <SelectField
-                  ariaLabel="상태 변경"
-                  value={draftStatus}
-                  onChange={(v) => setDraftStatus(v as ReservationStatus)}
-                  disabled={saving}
-                >
+                <SelectField ariaLabel="상태 변경" value={draftStatus} onChange={(v) => setDraftStatus(v as ReservationStatus)} disabled={saving}>
                   {(["pending", "confirmed", "completed", "canceled", "no_show"] as ReservationStatus[]).map((s) => (
                     <option key={s} value={s}>
                       {STATUS_LABEL[s]}
@@ -851,12 +838,7 @@ export default function AdminSchedulePage() {
               {/* ✅ 담당자 */}
               <div style={{ display: "grid", gap: 6 }}>
                 <div style={{ fontSize: 12, opacity: 0.78, color: "rgba(255,255,255,0.90)" }}>담당자</div>
-                <SelectField
-                  ariaLabel="담당자 선택"
-                  value={assigneeDraft}
-                  onChange={(v) => setAssigneeDraft(v)}
-                  disabled={saving}
-                >
+                <SelectField ariaLabel="담당자 선택" value={assigneeDraft} onChange={(v) => setAssigneeDraft(v)} disabled={saving}>
                   <option value="">(미배정)</option>
                   {admins.map((a) => (
                     <option key={a.user_id} value={a.user_id}>

@@ -3,12 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   adminListBlockedTimesByDate,
   adminListReservationsByDate,
+  adminSetReservationStatus,
   type AdminBlockedTime,
   type AdminReservationItem,
 } from "../lib/adminSchedule";
-
-// ✅ status 변경은 adminSchedule이 아니라 adminReservations 쪽에 있음
-import { adminSetReservationStatus } from "../lib/adminReservations";
 
 function toDateInputValue(d: Date) {
   const yyyy = d.getFullYear();
@@ -28,7 +26,6 @@ function fmtTimeKst(date: Date) {
 }
 
 function isoAtKst(dateStr: string, hhmm: string) {
-  // dateStr: YYYY-MM-DD, hhmm: HH:MM (KST 명시)
   return `${dateStr}T${hhmm}:00+09:00`;
 }
 
@@ -45,13 +42,20 @@ function buildSlots(dateStr: string) {
   const end = new Date(isoAtKst(dateStr, "18:00"));
   const slots: { label: string; iso: string }[] = [];
   for (let t = start; t < end; t = addMinutes(t, 30)) {
-    // toISOString()는 UTC(Z)로 변환되지만, 비교는 Date 파싱 기준이라 문제 없음
     slots.push({ label: fmtTimeKst(t), iso: t.toISOString() });
   }
   return slots;
 }
 
-const statusOptions = ["pending", "confirmed", "completed", "canceled", "no_show"] as const;
+const selectStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 12px",
+  borderRadius: 12,
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "rgba(17,24,39,0.75)",
+  color: "#fff",
+  outline: "none",
+};
 
 export default function AdminTimelinePage() {
   const [dateStr, setDateStr] = useState(() => toDateInputValue(new Date()));
@@ -93,51 +97,40 @@ export default function AdminTimelinePage() {
     });
   }, [slots, blocks, reservations]);
 
-  // ✅ 전역 CSS(color-scheme: light dark) 때문에 select 글자/배경이 섞여 안 보일 수 있음 -> 강제 지정
-  const selectStyle: React.CSSProperties = {
-    padding: "10px 12px",
-    width: "100%",
-    borderRadius: 12,
-    border: "1px solid rgba(255,255,255,0.12)",
-    background: "rgba(17,24,39,0.72)", // 다크 글래스 느낌
-    color: "#fff",
-    outline: "none",
-  };
-
-  const pageStyle: React.CSSProperties = {
-    maxWidth: 1100,
-    margin: "0 auto",
-    padding: 16,
-  };
-
-  const panelStyle: React.CSSProperties = {
-    marginTop: 14,
-    border: "1px solid rgba(255,255,255,0.10)",
-    borderRadius: 16,
-    overflow: "hidden",
-    background: "rgba(255,255,255,0.04)",
-    backdropFilter: "blur(10px)",
-  };
-
-  const headerRowStyle: React.CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "120px 1fr 240px",
-    background: "rgba(255,255,255,0.06)",
-    padding: 12,
-    fontWeight: 800,
-  };
+  const statusOptions = ["pending", "confirmed", "completed", "canceled", "no_show"];
 
   return (
-    <div style={pageStyle}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}>
       <h2 style={{ margin: "8px 0 12px" }}>관리자 타임라인</h2>
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
         <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
           날짜
-          <input type="date" value={dateStr} onChange={(e) => setDateStr(e.target.value)} style={{ padding: "8px 10px" }} />
+          <input
+            type="date"
+            value={dateStr}
+            onChange={(e) => setDateStr(e.target.value)}
+            style={{
+              padding: "10px 12px",
+              borderRadius: 12,
+              border: "1px solid #e5e7eb",
+            }}
+          />
         </label>
 
-        <button onClick={refresh} disabled={loading} style={{ padding: "10px 12px", cursor: "pointer" }}>
+        <button
+          onClick={refresh}
+          disabled={loading}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 12,
+            border: "1px solid rgba(0,0,0,0.10)",
+            background: "#111827",
+            color: "#fff",
+            fontWeight: 800,
+            cursor: "pointer",
+          }}
+        >
           새로고침
         </button>
 
@@ -145,8 +138,16 @@ export default function AdminTimelinePage() {
         {errorMsg ? <span style={{ color: "crimson" }}>{errorMsg}</span> : null}
       </div>
 
-      <div style={panelStyle}>
-        <div style={headerRowStyle}>
+      <div style={{ marginTop: 14, border: "1px solid #e5e7eb", borderRadius: 16, overflow: "hidden" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "120px 1fr 240px",
+            background: "#f9fafb",
+            padding: 12,
+            fontWeight: 800,
+          }}
+        >
           <div>시간</div>
           <div>상태</div>
           <div>예약 상태 변경</div>
@@ -159,10 +160,10 @@ export default function AdminTimelinePage() {
           const badgeText = isBlocked
             ? `차단: ${block?.reason ?? "사유 없음"}`
             : isReserved
-            ? `${res?.service_name} (${res?.duration_minutes}분) - ${res?.full_name ?? "이름없음"}`
-            : "비어있음";
+              ? `${res?.service_name} (${res?.duration_minutes}분) - ${res?.full_name ?? "이름없음"}`
+              : "비어있음";
 
-          const bg = isBlocked ? "rgba(255, 237, 213, 0.35)" : isReserved ? "rgba(219, 234, 254, 0.25)" : "transparent";
+          const bg = isBlocked ? "#fff7ed" : isReserved ? "#eff6ff" : "#ffffff";
 
           return (
             <div
@@ -172,17 +173,20 @@ export default function AdminTimelinePage() {
                 gridTemplateColumns: "120px 1fr 240px",
                 padding: 12,
                 background: bg,
-                borderTop: "1px solid rgba(255,255,255,0.08)",
+                borderTop: "1px solid #e5e7eb",
                 alignItems: "center",
+                gap: 12,
               }}
             >
-              <div style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontWeight: 800 }}>{slot.label}</div>
+              <div style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", fontWeight: 800 }}>
+                {slot.label}
+              </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ fontWeight: 700 }}>{badgeText}</div>
+                <div style={{ fontWeight: 800 }}>{badgeText}</div>
                 {isReserved ? (
-                  <div style={{ fontSize: 12, opacity: 0.85 }}>
-                    차량: {res?.car_model ?? "-"} | 연락처: {res?.phone ?? "-"} | 현재상태: <b>{res?.status}</b>
+                  <div style={{ fontSize: 12, opacity: 0.8 }}>
+                    차량: {res?.car_model ?? "-"} | 연락처: {res?.phone ?? "-"} | 현재상태: {res?.status}
                   </div>
                 ) : null}
               </div>
@@ -194,8 +198,7 @@ export default function AdminTimelinePage() {
                     onChange={async (e) => {
                       const next = e.target.value;
                       try {
-                        // adminSetReservationStatus가 더 엄격한 타입을 쓰더라도 통과시키기 위해 캐스팅
-                        await adminSetReservationStatus(res!.reservation_id, next as any);
+                        await adminSetReservationStatus(res!.reservation_id, next);
                         await refresh();
                       } catch (err: any) {
                         alert(err?.message ?? String(err));
@@ -204,13 +207,13 @@ export default function AdminTimelinePage() {
                     style={selectStyle}
                   >
                     {statusOptions.map((s) => (
-                      <option key={s} value={s} style={{ color: "#111", background: "#fff" }}>
+                      <option key={s} value={s} style={{ color: "#111827", background: "#ffffff" }}>
                         {s}
                       </option>
                     ))}
                   </select>
                 ) : (
-                  <span style={{ fontSize: 12, opacity: 0.65 }}>{isBlocked ? "차단됨" : "예약 없음"}</span>
+                  <span style={{ fontSize: 12, opacity: 0.6 }}>{isBlocked ? "차단됨" : "예약 없음"}</span>
                 )}
               </div>
             </div>

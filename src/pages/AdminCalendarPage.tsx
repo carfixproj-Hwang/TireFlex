@@ -3,6 +3,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminListReservationsByDate, type AdminReservationItem } from "../lib/adminSchedule";
 import { adminListBlockedTimesByDate, type AdminBlockedTime } from "../lib/adminSchedule";
+import {
+  adminAssignReservation,
+  adminDeleteReservation,
+  adminListAdmins,
+  adminMarkReservationCompleted,
+  adminSetReservationStatus,
+  adminUnassignReservation,
+  type AdminUserOption,
+  type ReservationStatus,
+} from "../lib/adminReservations";
 import { supabase } from "../lib/supabaseClient";
 
 import "../styles/adminCalendarPremium.css";
@@ -43,6 +53,10 @@ function kstHHmmFromIso(iso: string) {
   return `${hh}:${mm}`;
 }
 
+function fmtKstFull(iso: string) {
+  return new Date(iso).toLocaleString("ko-KR");
+}
+
 type DaySummary = {
   dateStr: string;
   reservations: AdminReservationItem[];
@@ -66,6 +80,14 @@ function clampText(v: any) {
   return String(v).trim();
 }
 
+const STATUS_LABEL: Record<ReservationStatus, string> = {
+  pending: "대기",
+  confirmed: "확정",
+  completed: "완료",
+  canceled: "취소",
+  no_show: "노쇼",
+};
+
 export default function AdminCalendarPage() {
   const navigate = useNavigate();
 
@@ -80,6 +102,17 @@ export default function AdminCalendarPage() {
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // ✅ 상세 모달
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  // ✅ 모달 내부 작업 지시
+  const [admins, setAdmins] = useState<AdminUserOption[]>([]);
+  const [myAdminId, setMyAdminId] = useState<string | null>(null);
+  const [activeResId, setActiveResId] = useState<string | null>(null);
+  const [draftStatus, setDraftStatus] = useState<ReservationStatus>("pending");
+  const [assigneeDraft, setAssigneeDraft] = useState<string>("");
+  const [actionBusy, setActionBusy] = useState(false);
 
   const monthStart = useMemo(() => startOfMonth(cursor), [cursor]);
   const monthEnd = useMemo(() => endOfMonth(cursor), [cursor]);
@@ -103,12 +136,10 @@ export default function AdminCalendarPage() {
     try {
       const dateStrs = days.map((d) => ymd(d));
 
-      // ✅ 병렬 호출(월 단위라 호출이 많으면 느릴 수 있음. 필요하면 나중에 RPC로 묶어 최적화)
       const results = await Promise.all(
         dateStrs.map(async (ds) => {
           const [r, b] = await Promise.all([adminListReservationsByDate(ds), adminListBlockedTimesByDate(ds)]);
-          const summary: DaySummary = { dateStr: ds, reservations: r, blocked: b };
-          return summary;
+          return { dateStr: ds, reservations: r, blocked: b } as DaySummary;
         })
       );
 
@@ -132,7 +163,39 @@ export default function AdminCalendarPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title]);
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!mounted) return;
+      setMyAdminId(data.user?.id ?? null);
+
+      try {
+        const list = await adminListAdmins();
+        if (!mounted) return;
+        setAdmins(list);
+      } catch {
+        setAdmins([]);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const selected = map[selectedDateStr] ?? null;
+
+  const activeRes = useMemo(() => {
+    if (!selected?.reservations?.length) return null;
+    if (!activeResId) return null;
+    return selected.reservations.find((r) => r.reservation_id === activeResId) ?? null;
+  }, [selected?.reservations, activeResId]);
+
+  useEffect(() => {
+    if (!activeRes) return;
+    setDraftStatus((activeRes.status as ReservationStatus) ?? "pending");
+    setAssigneeDraft((activeRes.assigned_admin_id as string) ?? "");
+  }, [activeRes?.reservation_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function goToOps(dateStr: string, tab: "schedule" | "blocked", focusReservationId?: string) {
     const qs = new URLSearchParams();
@@ -170,12 +233,8 @@ export default function AdminCalendarPage() {
         if (p?.reservationId && p?.fromDateStr && p?.hhmm) return p;
       } catch {}
     }
-
-    // fallback: text/plain = reservationId only
     const rid = e.dataTransfer.getData("text/plain");
-    if (rid) {
-      return { reservationId: rid, fromDateStr: "", hhmm: "09:00" } as DragPayload;
-    }
+    if (rid) return { reservationId: rid, fromDateStr: "", hhmm: "09:00" } as DragPayload;
     return null;
   }
 
@@ -184,8 +243,28 @@ export default function AdminCalendarPage() {
     const totalRes = vals.reduce((acc, s) => acc + (s.reservations?.length ?? 0), 0);
     const totalBlk = vals.reduce((acc, s) => acc + (s.blocked?.length ?? 0), 0);
     const busyDays = vals.filter((s) => (s.reservations?.length ?? 0) > 0).length;
-    return { totalRes, totalBlk, busyDays };
+    const completed = vals.reduce((acc, s) => acc + (s.reservations?.filter((r) => r.status === "completed").length ?? 0), 0);
+    return { totalRes, totalBlk, busyDays, completed };
   }, [map]);
+
+  const dayCounts = useMemo(() => {
+    const resCount = selected?.reservations?.length ?? 0;
+    const blkCount = selected?.blocked?.length ?? 0;
+    const doneCount = selected?.reservations?.filter((r) => r.status === "completed").length ?? 0;
+    return { resCount, blkCount, doneCount };
+  }, [selected?.reservations, selected?.blocked]);
+
+  async function refreshSelectedDayKeepModal() {
+    try {
+      const [r, b] = await Promise.all([adminListReservationsByDate(selectedDateStr), adminListBlockedTimesByDate(selectedDateStr)]);
+      setMap((prev) => ({
+        ...prev,
+        [selectedDateStr]: { dateStr: selectedDateStr, reservations: r, blocked: b },
+      }));
+    } catch (e: any) {
+      setMsg(e?.message ?? String(e));
+    }
+  }
 
   return (
     <div className="calShell">
@@ -200,7 +279,7 @@ export default function AdminCalendarPage() {
 
           <div className="calTitle">
             <div className="calTitleMain">{title}</div>
-            <div className="calTitleSub">관리자 달력 · 드래그로 날짜 이동</div>
+            <div className="calTitleSub">관리자 달력 · 클릭=상세/작업 · 드래그=날짜 이동</div>
           </div>
 
           <button className="calIconBtn" onClick={() => setCursor((d) => addMonths(d, 1))} aria-label="다음 달">
@@ -211,11 +290,12 @@ export default function AdminCalendarPage() {
         <div className="calTopRight">
           <div className="calChips">
             <span className="calChip">예약 {monthStats.totalRes}</span>
+            <span className="calChip calChipOk">완료 {monthStats.completed}</span>
             <span className="calChip calChipOk">활성일 {monthStats.busyDays}</span>
             <span className="calChip calChipDanger">차단 {monthStats.totalBlk}</span>
           </div>
 
-          <button className="calBtn" onClick={loadMonth} disabled={loading || saving}>
+          <button className="calBtn" onClick={loadMonth} disabled={loading || saving || actionBusy}>
             {loading ? "로딩..." : "새로고침"}
           </button>
         </div>
@@ -224,6 +304,7 @@ export default function AdminCalendarPage() {
       <div className="calHint">
         드래그 드롭: 기본은 <b>기존 시간 유지</b>. <b>Shift</b> 누른 채로 드롭하면 <b>09:00 고정</b>.
         {saving ? <span className="calSaving">이동 반영중…</span> : null}
+        {actionBusy ? <span className="calSaving">작업 처리중…</span> : null}
         {msg ? <span className="calMsg">{msg}</span> : null}
       </div>
 
@@ -239,14 +320,16 @@ export default function AdminCalendarPage() {
       {/* Grid */}
       <div className="calGrid">
         {Array.from({ length: leadingEmpty }).map((_, i) => (
-          <div key={`empty-${i}`} className="calCell calCellEmpty" />
+          <div key={`empty-${i}`} className="calCell calCellEmpty" style={{ gridColumn: "auto / span 1" }} aria-hidden />
         ))}
 
         {days.map((d) => {
           const ds = ymd(d);
           const s = map[ds];
+
           const resCount = s?.reservations?.length ?? 0;
           const blkCount = s?.blocked?.length ?? 0;
+          const doneCount = s?.reservations?.filter((r) => r.status === "completed").length ?? 0;
 
           const isSelected = ds === selectedDateStr;
           const isToday = ds === ymd(new Date());
@@ -257,14 +340,12 @@ export default function AdminCalendarPage() {
           return (
             <div
               key={ds}
-              className={cx(
-                "calCell",
-                isSelected && "isSelected",
-                isToday && "isToday",
-                hasBlocked && "hasBlocked",
-                isDragOver && "isDragOver"
-              )}
-              onClick={() => setSelectedDateStr(ds)}
+              className={cx("calCell", isSelected && "isSelected", isToday && "isToday", hasBlocked && "hasBlocked", isDragOver && "isDragOver")}
+              onClick={() => {
+                setSelectedDateStr(ds);
+                setActiveResId(null);
+                setDetailOpen(true);
+              }}
               onDragOver={(e) => {
                 if (!dragPayload) return;
                 e.preventDefault();
@@ -322,6 +403,20 @@ export default function AdminCalendarPage() {
 
                 <button
                   type="button"
+                  className="calPill calPillOk"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedDateStr(ds);
+                    setActiveResId(null);
+                    setDetailOpen(true);
+                  }}
+                  title="완료/예약 상세"
+                >
+                  완료 {doneCount}
+                </button>
+
+                <button
+                  type="button"
                   className="calPill calPillDanger"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -343,9 +438,9 @@ export default function AdminCalendarPage() {
                       <div
                         key={r.reservation_id}
                         className={cx("calItem", isDragging && "isDragging")}
-                        draggable={!saving}
+                        draggable={!saving && !actionBusy}
                         onDragStart={(e) => {
-                          if (saving) return;
+                          if (saving || actionBusy) return;
 
                           const payload: DragPayload = {
                             reservationId: r.reservation_id,
@@ -365,7 +460,9 @@ export default function AdminCalendarPage() {
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          goToOpsSchedule(ds, r.reservation_id);
+                          setSelectedDateStr(ds);
+                          setActiveResId(r.reservation_id);
+                          setDetailOpen(true);
                         }}
                         title={saving ? "이동 처리중…" : `드래그해서 이동 (기본 ${hhmm} 유지, Shift 드롭=09:00)`}
                       >
@@ -390,84 +487,322 @@ export default function AdminCalendarPage() {
         })}
       </div>
 
-      {/* Detail Panel */}
-      <div className="calPanel">
-        <div className="calPanelHead">
-          <div className="calPanelTitle">{selectedDateStr} 상세</div>
-          <div className="calPanelActions">
-            <button type="button" className="calBtnGhost" onClick={() => goToOpsSchedule(selectedDateStr)}>
-              운영 스케줄(예약) →
-            </button>
-          </div>
-        </div>
+      {/* ✅ 상세/작업 모달 */}
+      {detailOpen ? (
+        <div
+          className="calModalBackdrop"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setDetailOpen(false);
+          }}
+        >
+          <div className="calModalPanel">
+            <div className="calModalHead">
+              <div>
+                <div className="calModalTitle">{selectedDateStr} 상세</div>
+                <div className="calModalSub">예약 클릭 → 아래에서 상태/담당자/완료/삭제 작업</div>
+              </div>
 
-        <div className="calPanelBody">
-          <section className="calSection">
-            <div className="calSectionHead">
-              <div className="calSectionTitle">예약</div>
-              <div className="calSectionSub">{selected?.reservations?.length ? `${selected.reservations.length}건` : "0건"}</div>
+              <div className="calModalHeadActions">
+                <button type="button" className="calBtnGhost" onClick={() => goToOpsSchedule(selectedDateStr)}>
+                  운영 스케줄(예약) →
+                </button>
+                <button type="button" className="calBtnGhost" onClick={() => goToOpsBlocked(selectedDateStr)}>
+                  차단 관리 →
+                </button>
+                <button
+                  type="button"
+                  className="calIconBtn"
+                  onClick={() => {
+                    setDetailOpen(false);
+                    setActiveResId(null);
+                  }}
+                  aria-label="닫기"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
-            {selected?.reservations?.length ? (
-              <div className="calCards">
-                {selected.reservations.map((r) => (
-                  <button
-                    key={r.reservation_id}
-                    type="button"
-                    className="calCard"
-                    onClick={() => goToOpsSchedule(selectedDateStr, r.reservation_id)}
-                    title="운영 스케줄(예약)로 이동"
-                  >
-                    <div className="calCardTitle">
-                      {r.service_name} <span className="calCardDot" aria-hidden>·</span>{" "}
-                      <span className="calCardName">{r.full_name ?? "-"}</span>
-                      <span className="calCardDot" aria-hidden>·</span> <span className="calCardPhone">{r.phone ?? "-"}</span>
-                    </div>
-                    <div className="calCardSub">
-                      시작: {new Date(r.scheduled_at).toLocaleString("ko-KR")} · {r.duration_minutes}분 · 상태:{" "}
-                      <b>{r.status}</b>
-                    </div>
-                  </button>
-                ))}
+            <div className="calModalBody">
+              <div className="calModalSummaryRow">
+                <span className="calChip">예약 {dayCounts.resCount}</span>
+                <span className="calChip calChipOk">완료 {dayCounts.doneCount}</span>
+                <span className="calChip calChipDanger">차단 {dayCounts.blkCount}</span>
               </div>
-            ) : (
-              <div className="calEmptyLine">예약이 없습니다.</div>
-            )}
-          </section>
 
-          <section className="calSection">
-            <div className="calSectionHead">
-              <div className="calSectionTitle">차단</div>
-              <button type="button" className="calBtnGhost" onClick={() => goToOpsBlocked(selectedDateStr)}>
-                차단 관리로 이동 →
+              <section className="calSection">
+                <div className="calSectionHead">
+                  <div className="calSectionTitle">예약</div>
+                  <div className="calSectionSub">{selected?.reservations?.length ? `${selected.reservations.length}건` : "0건"}</div>
+                </div>
+
+                {selected?.reservations?.length ? (
+                  <div className="calCards">
+                    {selected.reservations.map((r) => (
+                      <button
+                        key={r.reservation_id}
+                        type="button"
+                        className={cx("calCard", activeResId === r.reservation_id && "isActive")}
+                        onClick={() => setActiveResId(r.reservation_id)}
+                        title="클릭해서 아래에서 작업"
+                      >
+                        <div className="calCardTitle">
+                          {r.service_name} <span className="calCardDot" aria-hidden>·</span>{" "}
+                          <span className="calCardName">{r.full_name ?? "-"}</span>
+                          <span className="calCardDot" aria-hidden>·</span>{" "}
+                          <span className="calCardPhone">{r.phone ?? "-"}</span>
+                        </div>
+                        <div className="calCardSub">
+                          시작: {fmtKstFull(r.scheduled_at)} · {r.duration_minutes}분 · 상태:{" "}
+                          <b>{STATUS_LABEL[(r.status as ReservationStatus) ?? "pending"] ?? r.status}</b>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="calEmptyLine">예약이 없습니다.</div>
+                )}
+              </section>
+
+              {/* ✅ 작업 지시 패널 */}
+              {activeRes ? (
+                <section className="calWorkPanel">
+                  <div className="calWorkHead">
+                    <div className="calWorkTitle">작업 지시</div>
+                    <button type="button" className="calBtnGhost" onClick={() => setActiveResId(null)}>
+                      닫기
+                    </button>
+                  </div>
+
+                  <div className="calWorkBody">
+                    <div className="calWorkInfo">
+                      <div className="calWorkInfoMain">
+                        <b>{activeRes.service_name}</b> · {activeRes.full_name ?? "-"} ({activeRes.phone ?? "-"})
+                      </div>
+                      <div className="calWorkInfoSub">
+                        시작: {fmtKstFull(activeRes.scheduled_at)} · {activeRes.duration_minutes}분 · 상태:{" "}
+                        <b>{STATUS_LABEL[(activeRes.status as ReservationStatus) ?? "pending"] ?? activeRes.status}</b>
+                      </div>
+                    </div>
+
+                    <div className="calWorkControls">
+                      <div className="calField">
+                        <div className="calFieldLabel">상태</div>
+                        <select
+                          className="calSelect"
+                          value={draftStatus}
+                          onChange={(e) => setDraftStatus(e.target.value as ReservationStatus)}
+                          disabled={actionBusy}
+                        >
+                          {(["pending", "confirmed", "completed", "canceled", "no_show"] as ReservationStatus[]).map((s) => (
+                            <option key={s} value={s}>
+                              {STATUS_LABEL[s]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="calBtn"
+                        disabled={actionBusy || draftStatus === (activeRes.status as ReservationStatus)}
+                        onClick={async () => {
+                          try {
+                            setActionBusy(true);
+                            setMsg(null);
+                            const ok = await adminSetReservationStatus(activeRes.reservation_id, draftStatus);
+                            if (!ok) throw new Error("상태 변경 실패");
+                            await refreshSelectedDayKeepModal();
+                          } catch (e: any) {
+                            setMsg(e?.message ?? String(e));
+                          } finally {
+                            setActionBusy(false);
+                          }
+                        }}
+                        title="상태 적용"
+                      >
+                        상태 적용
+                      </button>
+
+                      <div className="calField">
+                        <div className="calFieldLabel">담당자</div>
+                        <select
+                          className="calSelect"
+                          value={assigneeDraft}
+                          onChange={(e) => setAssigneeDraft(e.target.value)}
+                          disabled={actionBusy}
+                        >
+                          <option value="">(미배정)</option>
+                          {admins.map((a) => (
+                            <option key={a.user_id} value={a.user_id}>
+                              {a.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="calBtnGhost"
+                        disabled={actionBusy || !assigneeDraft}
+                        onClick={async () => {
+                          try {
+                            if (!assigneeDraft) throw new Error("배정할 담당자를 선택하세요.");
+                            setActionBusy(true);
+                            setMsg(null);
+                            const ok = await adminAssignReservation(activeRes.reservation_id, assigneeDraft);
+                            if (!ok) throw new Error("배정 실패");
+                            await refreshSelectedDayKeepModal();
+                          } catch (e: any) {
+                            setMsg(e?.message ?? String(e));
+                          } finally {
+                            setActionBusy(false);
+                          }
+                        }}
+                        title="담당자 배정"
+                      >
+                        담당자 배정
+                      </button>
+
+                      <button
+                        type="button"
+                        className="calBtnGhost"
+                        disabled={actionBusy || !activeRes.assigned_admin_id}
+                        onClick={async () => {
+                          try {
+                            setActionBusy(true);
+                            setMsg(null);
+                            const ok = await adminUnassignReservation(activeRes.reservation_id);
+                            if (!ok) throw new Error("배정 해제 실패");
+                            setAssigneeDraft("");
+                            await refreshSelectedDayKeepModal();
+                          } catch (e: any) {
+                            setMsg(e?.message ?? String(e));
+                          } finally {
+                            setActionBusy(false);
+                          }
+                        }}
+                        title="배정 해제"
+                      >
+                        배정 해제
+                      </button>
+
+                      <button
+                        type="button"
+                        className="calBtnOk"
+                        disabled={actionBusy || activeRes.status === "completed"}
+                        onClick={async () => {
+                          try {
+                            setActionBusy(true);
+                            setMsg(null);
+                            const ok = await adminMarkReservationCompleted(activeRes.reservation_id);
+                            if (!ok) throw new Error("완료 처리 실패");
+                            setDraftStatus("completed");
+                            await refreshSelectedDayKeepModal();
+                          } catch (e: any) {
+                            setMsg(e?.message ?? String(e));
+                          } finally {
+                            setActionBusy(false);
+                          }
+                        }}
+                        title={`완료 처리(기록)${myAdminId ? ` · 완료자=${myAdminId}` : ""}`}
+                      >
+                        완료 처리(기록)
+                      </button>
+
+                      <button
+                        type="button"
+                        className="calBtnDanger"
+                        disabled={actionBusy}
+                        onClick={async () => {
+                          const ok1 = confirm("이 예약을 DB에서 완전히 삭제할까요? (되돌릴 수 없음)");
+                          if (!ok1) return;
+                          const ok2 = confirm("정말 삭제할까요? 삭제하면 기록이 사라집니다.");
+                          if (!ok2) return;
+
+                          try {
+                            setActionBusy(true);
+                            setMsg(null);
+                            const ok = await adminDeleteReservation(activeRes.reservation_id);
+                            if (!ok) throw new Error("삭제 실패");
+                            setActiveResId(null);
+                            await refreshSelectedDayKeepModal();
+                          } catch (e: any) {
+                            setMsg(e?.message ?? String(e));
+                          } finally {
+                            setActionBusy(false);
+                          }
+                        }}
+                        title="예약 삭제"
+                      >
+                        예약 삭제
+                      </button>
+
+                      <button
+                        type="button"
+                        className="calBtnGhost"
+                        disabled={actionBusy}
+                        onClick={() => goToOpsSchedule(selectedDateStr, activeRes.reservation_id)}
+                        title="원래 운영(스케줄) 화면에서 보기"
+                      >
+                        운영 화면에서 보기 →
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              ) : null}
+
+              <section className="calSection">
+                <div className="calSectionHead">
+                  <div className="calSectionTitle">차단</div>
+                  <button type="button" className="calBtnGhost" onClick={() => goToOpsBlocked(selectedDateStr)}>
+                    차단 관리로 이동 →
+                  </button>
+                </div>
+
+                {selected?.blocked?.length ? (
+                  <div className="calCards">
+                    {selected.blocked.map((b) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        className={cx("calCard", "calCardDanger")}
+                        onClick={() => goToOpsBlocked(selectedDateStr)}
+                        title="차단 관리로 이동"
+                      >
+                        <div className="calCardTitle">
+                          ⛔ {fmtKstFull(b.start_at)} <span className="calCardDot" aria-hidden>·</span> {fmtKstFull(b.end_at)}
+                        </div>
+                        <div className="calCardSub">{clampText(b.reason) || "-"}</div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="calEmptyLine">차단이 없습니다.</div>
+                )}
+              </section>
+            </div>
+
+            <div className="calModalFoot">
+              <div className="calModalFootHint">
+                팁: 셀 안의 예약은 <b>드래그</b>로 날짜 이동 가능 (Shift 드롭 = 09:00 고정)
+              </div>
+              <button
+                type="button"
+                className="calBtn"
+                onClick={() => {
+                  setDetailOpen(false);
+                  setActiveResId(null);
+                }}
+              >
+                닫기
               </button>
             </div>
-
-            {selected?.blocked?.length ? (
-              <div className="calCards">
-                {selected.blocked.map((b) => (
-                  <button
-                    key={b.id}
-                    type="button"
-                    className={cx("calCard", "calCardDanger")}
-                    onClick={() => goToOpsBlocked(selectedDateStr)}
-                    title="차단 관리로 이동"
-                  >
-                    <div className="calCardTitle">
-                      ⛔ {new Date(b.start_at).toLocaleString("ko-KR")}{" "}
-                      <span className="calCardDot" aria-hidden>·</span>{" "}
-                      {new Date(b.end_at).toLocaleString("ko-KR")}
-                    </div>
-                    <div className="calCardSub">{clampText(b.reason) || "-"}</div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="calEmptyLine">차단이 없습니다.</div>
-            )}
-          </section>
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

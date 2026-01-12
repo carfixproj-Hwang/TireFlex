@@ -1,3 +1,4 @@
+// src/App.tsx
 import { useEffect, useMemo, useState } from "react";
 import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
 import { supabase } from "./lib/supabaseClient";
@@ -9,42 +10,66 @@ import HomePage from "./pages/HomePage";
 import AuthPage from "./pages/AuthPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import BookPage from "./pages/BookPage";
-import AdminServicesPage from "./pages/admin/AdminServicesPage";
-import DebugPage from "./pages/DebugPage";
+import MyServiceHistoryPage from "./pages/MyServiceHistoryPage";
 
+import AdminServicesPage from "./pages/admin/AdminServicesPage";
 import AdminOpsPage from "./pages/admin/AdminOpsPage";
 import AdminCalendarPage from "./pages/AdminCalendarPage";
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminStaffPage from "./pages/admin/AdminStaffPage";
+import OwnerStaffPage from "./pages/admin/OwnerStaffPage";
+
+import DebugPage from "./pages/DebugPage";
 
 import "./styles/appShell.css";
+
+/* ======================
+   Types
+====================== */
+type AppRole = "owner" | "staff" | "member";
 
 type SessionState = {
   loading: boolean;
   userId: string | null;
-  isAdmin: boolean;
+  role: AppRole;
+  isAdmin: boolean; // staff || owner
   error: string | null;
 };
 
-async function fetchIsAdmin(uid: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("is_admin", { uid });
-  if (error) return false;
-  return Boolean(data);
+/* ======================
+   RPC helpers
+====================== */
+async function fetchRole(): Promise<AppRole> {
+  const { data, error } = await supabase.rpc("get_my_role");
+  if (error) return "member";
+
+  const r = String(data ?? "member");
+  return r === "owner" || r === "staff" || r === "member" ? r : "member";
 }
 
-function AppLayout({ session, isAuthed }: { session: SessionState; isAuthed: boolean }) {
+/* ======================
+   Layout
+====================== */
+function AppLayout({
+  session,
+  isAuthed,
+}: {
+  session: SessionState;
+  isAuthed: boolean;
+}) {
   return (
     <div className="appShell">
       <Navbar isAuthed={isAuthed} isAdmin={session.isAdmin} />
 
-      {session.error ? (
+      {session.error && (
         <div className="appNotice">
           <div className="appNoticeInner">
             <span className="appNoticeDot" aria-hidden />
             <span>오류: {session.error}</span>
           </div>
         </div>
-      ) : null}
+      )}
 
-      {/* ✅ fixed navbar 높이만큼 아래로 내려서 어떤 페이지에서도 항상 보이게 */}
       <main className="appMain appMain--full" style={{ paddingTop: 64 }}>
         <Outlet />
       </main>
@@ -54,10 +79,14 @@ function AppLayout({ session, isAuthed }: { session: SessionState; isAuthed: boo
   );
 }
 
+/* ======================
+   App Inner
+====================== */
 function AppInner() {
   const [session, setSession] = useState<SessionState>({
     loading: true,
     userId: null,
+    role: "member",
     isAdmin: false,
     error: null,
   });
@@ -65,61 +94,92 @@ function AppInner() {
   useEffect(() => {
     let mounted = true;
 
-    const t = setTimeout(() => {
+    const timeout = setTimeout(() => {
       if (!mounted) return;
       setSession((prev) =>
         prev.loading
           ? {
               ...prev,
               loading: false,
-              error: prev.error ?? "세션 로딩이 지연됩니다. 콘솔/네트워크를 확인하세요.",
+              error: prev.error ?? "세션 로딩이 지연됩니다.",
             }
           : prev
       );
     }, 4000);
 
-    const load = async () => {
+    const loadSession = async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
         if (!mounted) return;
 
         if (error) {
-          setSession({ loading: false, userId: null, isAdmin: false, error: error.message });
+          setSession({
+            loading: false,
+            userId: null,
+            role: "member",
+            isAdmin: false,
+            error: error.message,
+          });
           return;
         }
 
         const uid = data.session?.user?.id ?? null;
+        let role: AppRole = "member";
 
-        let isAdmin = false;
-        if (uid) isAdmin = await fetchIsAdmin(uid);
+        if (uid) {
+          role = await fetchRole();
+        }
 
         if (!mounted) return;
-        setSession({ loading: false, userId: uid, isAdmin, error: null });
+        setSession({
+          loading: false,
+          userId: uid,
+          role,
+          isAdmin: role === "owner" || role === "staff",
+          error: null,
+        });
       } catch (e: any) {
         if (!mounted) return;
-        setSession({ loading: false, userId: null, isAdmin: false, error: e?.message ?? String(e) });
+        setSession({
+          loading: false,
+          userId: null,
+          role: "member",
+          isAdmin: false,
+          error: e?.message ?? String(e),
+        });
       }
     };
 
-    load();
+    loadSession();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
       const uid = s?.user?.id ?? null;
-      let isAdmin = false;
-      if (uid) isAdmin = await fetchIsAdmin(uid);
+      let role: AppRole = "member";
+
+      if (uid) {
+        role = await fetchRole();
+      }
 
       if (!mounted) return;
-      setSession({ loading: false, userId: uid, isAdmin, error: null });
+      setSession({
+        loading: false,
+        userId: uid,
+        role,
+        isAdmin: role === "owner" || role === "staff",
+        error: null,
+      });
     });
 
     return () => {
       mounted = false;
-      clearTimeout(t);
+      clearTimeout(timeout);
       sub.subscription.unsubscribe();
     };
   }, []);
 
   const isAuthed = useMemo(() => !!session.userId, [session.userId]);
+  const isOwner = session.role === "owner";
+  const isStaffOrOwner = session.role === "staff" || session.role === "owner";
 
   if (session.loading) {
     return (
@@ -157,6 +217,16 @@ function AppInner() {
         />
 
         <Route
+          path="/my/history"
+          element={
+            <ProtectedRoute isAllowed={isAuthed} redirectTo="/auth">
+              <MyServiceHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 관리자 (staff + owner) */}
+        <Route
           path="/admin/services"
           element={
             <ProtectedRoute isAllowed={isAuthed && session.isAdmin} redirectTo="/">
@@ -175,27 +245,40 @@ function AppInner() {
         />
 
         <Route
-          path="/admin/schedule"
-          element={
-            <ProtectedRoute isAllowed={isAuthed && session.isAdmin} redirectTo="/">
-              <AdminOpsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/reservations"
-          element={
-            <ProtectedRoute isAllowed={isAuthed && session.isAdmin} redirectTo="/">
-              <AdminOpsPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
           path="/admin/calendar"
           element={
             <ProtectedRoute isAllowed={isAuthed && session.isAdmin} redirectTo="/">
               <AdminCalendarPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 회원 관리 (staff/owner) */}
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute isAllowed={isAuthed && isStaffOrOwner} redirectTo="/">
+              <AdminUsersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 직원 관리 (owner only) */}
+        <Route
+          path="/admin/staff"
+          element={
+            <ProtectedRoute isAllowed={isAuthed && isOwner} redirectTo="/">
+              <AdminStaffPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 최고관리자 전용 */}
+        <Route
+          path="/owner/staff"
+          element={
+            <ProtectedRoute isAllowed={isAuthed && isOwner} redirectTo="/">
+              <OwnerStaffPage />
             </ProtectedRoute>
           }
         />
@@ -206,6 +289,9 @@ function AppInner() {
   );
 }
 
+/* ======================
+   App Root
+====================== */
 export default function App() {
   return (
     <BrowserRouter>

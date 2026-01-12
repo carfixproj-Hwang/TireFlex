@@ -1,3 +1,4 @@
+// src/pages/HomePage.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
@@ -92,6 +93,10 @@ function formatDuration(it: ServiceItemRow): string {
   return `${it.duration_minutes}분`;
 }
 
+// ✅ 홈 공개용 최근 완료 통계 응답 타입
+type RecentCompletedItem = { completed_at: string; service_name: string | null };
+type RecentCompletedSummary = { count: number; items: RecentCompletedItem[] };
+
 export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
   const nav = useNavigate();
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -125,12 +130,19 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
     data: null,
   });
 
+  // ✅ 최근 7일 완료 통계/리스트 (개인정보 없음)
+  const [recentDone, setRecentDone] = useState<LoadState<RecentCompletedSummary>>({
+    loading: true,
+    error: null,
+    data: null,
+  });
+
   useEffect(() => {
     let alive = true;
 
     const load = async () => {
       try {
-        // 1) service_items (실스키마 반영)
+        // 1) service_items
         const r1 = await supabase
           .from("service_items")
           .select("id,name,description,duration_minutes,active,duration_unit,duration_value");
@@ -151,7 +163,6 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
             duration_value: row.duration_value != null ? Number(row.duration_value) : null,
           }));
 
-          // 실서비스 기준: active 우선 + 이름 정렬
           normalized.sort((a, b) => {
             const aa = Number(b.active) - Number(a.active);
             if (aa !== 0) return aa;
@@ -213,7 +224,6 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
 
       try {
         const dateStr = todayKST();
-        // RPC 시그니처: get_available_slots(slot_date date, service_item_id uuid)
         const r = await supabase.rpc("get_available_slots", {
           slot_date: dateStr,
           service_item_id: basis.id,
@@ -249,12 +259,53 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
       }
     };
 
-    // items 로딩 완료 후 실행
     if (!items.loading) run();
     return () => {
       alive = false;
     };
   }, [items.loading, items.data]);
+
+  // ✅ 5) 최근 7일 완료 통계/리스트 (RLS 영향 없이 안전 RPC)
+  useEffect(() => {
+    let alive = true;
+
+    const run = async () => {
+      setRecentDone({ loading: true, error: null, data: null });
+      try {
+        const r = await supabase.rpc("public_recent_completed_summary", { days: 7, lim: 6 });
+        if (!alive) return;
+
+        if (r.error) {
+          setRecentDone({ loading: false, error: r.error.message, data: { count: 0, items: [] } });
+          return;
+        }
+
+        const raw = r.data as any;
+        const count = Number(raw?.count ?? 0);
+        const items = Array.isArray(raw?.items) ? raw.items : [];
+        const normalized: RecentCompletedItem[] = items
+          .map((x: any) => ({
+            completed_at: String(x?.completed_at ?? ""),
+            service_name: x?.service_name != null ? String(x.service_name) : null,
+          }))
+          .filter((x: RecentCompletedItem) => x.completed_at);
+
+        setRecentDone({ loading: false, error: null, data: { count, items: normalized } });
+      } catch (e: any) {
+        if (!alive) return;
+        setRecentDone({
+          loading: false,
+          error: e?.message ?? String(e),
+          data: { count: 0, items: [] },
+        });
+      }
+    };
+
+    run();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const opsInfo = useMemo(() => {
     const d = ops.data;
@@ -307,9 +358,6 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
 
         <section className="heroSimple">
           <div className="heroInner premiumHero">
-            {/* (중복 제거) 브랜드바는 Navbar에서만 관리 */}
-
-
             <h1 className="heroTitle">
               <br />
               정직한 서비스와, 합리적인 가격으로
@@ -394,6 +442,28 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
                         {b.start}–{b.end}
                       </span>
                       <span className="blockReason">{b.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ✅ 최근 7일 완료 내역(개인정보 없음) */}
+              <div className="opsBox">
+                <div className="opsLabel">최근 7일 정비 완료</div>
+                <div className="opsValue">
+                  {recentDone.loading ? "불러오는 중…" : `${recentDone.data?.count ?? 0}건 완료`}
+                </div>
+
+                <div className="blocksMini">
+                  {recentDone.error ? <div className="muted">오류: {recentDone.error}</div> : null}
+                  {!recentDone.loading && (recentDone.data?.items?.length ?? 0) === 0 ? (
+                    <div className="muted">최근 완료 내역이 없습니다.</div>
+                  ) : null}
+
+                  {(recentDone.data?.items ?? []).map((x, idx) => (
+                    <div className="blockRow" key={`${x.completed_at}-${idx}`}>
+                      <span className="blockTime">{fmtKST(x.completed_at)}</span>
+                      <span className="blockReason">{x.service_name ?? "정비"}</span>
                     </div>
                   ))}
                 </div>

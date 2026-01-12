@@ -511,3 +511,232 @@
     border-radius: 16px;
   }
 }
+
+/* ====== FIX: 달력 그리드가 데이터 로딩 시 망가지는 현상 방지 ====== */
+
+/* 1) 7칸을 항상 동일 비율로, 화면 밖으로 밀리지 않게 */
+.calGrid {
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+}
+
+/* 2) 행 높이를 고정해서 어떤 셀 내용이 커져도 전체 레이아웃이 찌그러지지 않게 */
+.calGrid {
+  grid-auto-rows: 190px !important; /* 필요하면 180~220 사이로 조절 */
+}
+
+/* 3) 셀 자체는 overflow를 숨기고, 내부 리스트만 안전하게 잘라냄 */
+.calCell {
+  overflow: hidden !important;
+}
+
+/* 4) leading empty 셀은 "span 덩어리"가 되지 않게 무조건 1칸 처리 */
+.calCellEmpty {
+  grid-column: auto / span 1 !important;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: none !important;
+  opacity: 0.35 !important;
+  pointer-events: none !important;
+}
+
+/* 5) 셀 안의 리스트가 길어져도 셀을 늘리지 말고 잘라내기 */
+.calList {
+  max-height: 76px !important; /* 2줄 + more 정도 */
+  overflow: hidden !important;
+}
+
+/* 6) 긴 텍스트가 폭을 밀어버리는 것을 방지 */
+.calItemText {
+  display: inline-block !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* ====== FIX: 모달 ====== */
+.calModalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 16px;
+}
+
+.calModalPanel {
+  width: min(980px, 100%);
+  max-height: min(86vh, 900px);
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 14, 24, 0.92);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.calModalHead {
+  padding: 14px 14px 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.calModalTitle {
+  font-weight: 950;
+  letter-spacing: -0.4px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.calModalSub {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.75;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.calModalHeadActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.calModalBody {
+  padding: 14px;
+  overflow: auto;
+}
+
+.calModalFoot {
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.calModalFootHint {
+  font-size: 12px;
+  opacity: 0.75;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* 완료 pill 색이 없으면 추가(기존 클래스 없을 때 대비) */
+.calPillOk {
+  border: 1px solid rgba(110, 231, 183, 0.28) !important;
+  background: rgba(110, 231, 183, 0.10) !important;
+}
+
+/* src/styles/adminCalendarPremium.css (맨 아래에 추가) */
+
+/* 작업 지시 패널 */
+.calWorkPanel {
+  margin-top: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.calWorkHead {
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.calWorkTitle {
+  font-weight: 950;
+  letter-spacing: -0.3px;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.calWorkBody {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.calWorkInfoMain {
+  color: rgba(255, 255, 255, 0.94);
+  letter-spacing: -0.2px;
+}
+
+.calWorkInfoSub {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.calWorkControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.calField {
+  display: grid;
+  gap: 6px;
+}
+
+.calFieldLabel {
+  font-size: 12px;
+  opacity: 0.78;
+  color: rgba(255, 255, 255, 0.90);
+}
+
+.calSelect {
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 32, 0.75);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+  min-width: 170px;
+}
+
+.calBtnOk {
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(110, 231, 183, 0.28);
+  background: rgba(110, 231, 183, 0.10);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.calBtnDanger {
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  background: rgba(251, 113, 133, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.calModalSummaryRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+/* active 카드 표시 */
+.calCard.isActive {
+  outline: 2px solid rgba(255, 255, 255, 0.88);
+  outline-offset: -2px;
+}
