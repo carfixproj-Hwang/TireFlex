@@ -5,11 +5,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import AdminSchedulePage from "./AdminSchedulePage";
 import AdminReservationsPage from "./AdminReservationsPage";
 import AdminBlockedTimesPage from "../AdminBlockedTimesPage";
+import AdminOpsSettingsPage from "./AdminOpsSettingsPage";
 
-type TabKey = "schedule" | "reservations" | "blocked";
+type TabKey = "schedule" | "reservations" | "blocked" | "settings";
 
 function parseTab(v: string | null): TabKey | null {
-  if (v === "schedule" || v === "reservations" || v === "blocked") return v;
+  if (v === "schedule" || v === "reservations" || v === "blocked" || v === "settings") return v;
   return null;
 }
 
@@ -19,7 +20,6 @@ export default function AdminOpsPage() {
 
   const [tab, setTab] = useState<TabKey>("schedule");
 
-  // ✅ URL ?tab=... 로 진입하면 해당 탭으로 자동 전환
   useEffect(() => {
     const sp = new URLSearchParams(location.search);
     const t = parseTab(sp.get("tab"));
@@ -35,6 +35,8 @@ export default function AdminOpsPage() {
         return "예약 목록 + 상태 변경";
       case "blocked":
         return "차단 추가/해제";
+      case "settings":
+        return "운영 설정(리프트/슬롯 등)";
       default:
         return "";
     }
@@ -43,7 +45,7 @@ export default function AdminOpsPage() {
   const setTabAndSyncUrl = (next: TabKey) => {
     setTab(next);
     const sp = new URLSearchParams(location.search);
-    sp.set("tab", next); // ✅ date, focus 등 다른 파라미터는 유지
+    sp.set("tab", next);
     navigate({ pathname: location.pathname, search: `?${sp.toString()}` }, { replace: true });
   };
 
@@ -74,6 +76,9 @@ export default function AdminOpsPage() {
           <TabButton active={tab === "blocked"} onClick={() => setTabAndSyncUrl("blocked")}>
             차단관리
           </TabButton>
+          <TabButton active={tab === "settings"} onClick={() => setTabAndSyncUrl("settings")}>
+            운영설정
+          </TabButton>
         </div>
       </div>
 
@@ -81,6 +86,7 @@ export default function AdminOpsPage() {
         {tab === "schedule" ? <AdminSchedulePage /> : null}
         {tab === "reservations" ? <AdminReservationsPage /> : null}
         {tab === "blocked" ? <AdminBlockedTimesPage /> : null}
+        {tab === "settings" ? <AdminOpsSettingsPage /> : null}
       </div>
     </div>
   );

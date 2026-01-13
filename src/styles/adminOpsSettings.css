@@ -1,0 +1,234 @@
+/* src/styles/adminOpsSettings.css */
+
+.aosShell {
+  position: relative;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 10px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.aosBg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(900px 420px at 18% 8%, rgba(255,255,255,0.10), transparent 60%),
+    radial-gradient(800px 420px at 82% 12%, rgba(255,255,255,0.07), transparent 62%),
+    linear-gradient(180deg, #0b1220, #070b14);
+}
+
+.aosHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.aosTitle {
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.4px;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.aosSub {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.78;
+  color: rgba(255, 255, 255, 0.90);
+}
+
+.aosGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 12px;
+}
+
+@media (max-width: 920px) {
+  .aosGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.aosCard {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+  padding: 14px;
+}
+
+.aosCardTitle {
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.aosCardDesc {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.78;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.90);
+}
+
+.aosLiftRow {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.aosIconBtn {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  cursor: pointer;
+  font-weight: 950;
+  font-size: 18px;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.25);
+}
+
+.aosIconBtn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.aosIconBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.aosLiftInputWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.aosInput {
+  flex: 1;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(12,18,32,0.75);
+  color: rgba(255,255,255,0.92);
+  outline: none;
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.28);
+}
+
+.aosInput:focus {
+  border-color: rgba(255,255,255,0.26);
+}
+
+.aosUnit {
+  min-width: 24px;
+  opacity: 0.85;
+  font-weight: 900;
+  color: rgba(255,255,255,0.90);
+}
+
+.aosPreview {
+  margin-top: 10px;
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.92);
+}
+
+.aosActions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.aosBtn,
+.aosBtnGhost,
+.aosBtnPrimary {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.16);
+  cursor: pointer;
+  font-weight: 950;
+  letter-spacing: -0.2px;
+}
+
+.aosBtn {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+}
+
+.aosBtn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.aosBtnGhost {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+}
+
+.aosBtnGhost:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.aosBtnPrimary {
+  background: rgba(255,255,255,0.92);
+  color: #0b0f18;
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 16px 34px rgba(0,0,0,0.35);
+}
+
+.aosBtnPrimary:hover {
+  background: rgba(255,255,255,0.96);
+}
+
+.aosBtn:disabled,
+.aosBtnGhost:disabled,
+.aosBtnPrimary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.aosMsg {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  font-size: 12px;
+  color: rgba(255,255,255,0.92);
+}
+
+.aosKv {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px 12px;
+}
+
+.aosK {
+  font-size: 12px;
+  opacity: 0.78;
+  color: rgba(255,255,255,0.90);
+}
+
+.aosV {
+  font-size: 12px;
+  font-weight: 950;
+  color: rgba(255,255,255,0.92);
+}

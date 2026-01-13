@@ -1,0 +1,156 @@
+/* src/styles/adminOpsSettingsPremium.css */
+
+.aosShell {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.aosCard {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+  backdrop-filter: blur(10px);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.aosHead {
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.aosTitle {
+  font-weight: 950;
+  letter-spacing: -0.4px;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 16px;
+}
+
+.aosSub {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.82;
+  color: rgba(255, 255, 255, 0.90);
+}
+
+.aosPill {
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 14, 22, 0.55);
+  white-space: nowrap;
+}
+
+.aosBody {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.aosRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.aosField {
+  display: grid;
+  gap: 6px;
+  min-width: 260px;
+  flex: 1;
+}
+
+.aosLabel {
+  font-size: 12px;
+  opacity: 0.78;
+  color: rgba(255, 255, 255, 0.90);
+  font-weight: 900;
+}
+
+.aosInput {
+  padding: 11px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 32, 0.78);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
+}
+
+.aosHint {
+  font-size: 12px;
+  opacity: 0.75;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.aosActions {
+  display: flex;
+  gap: 10px;
+}
+
+.aosBtnPrimary {
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+  color: #0b0f18;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.35);
+}
+
+.aosBtnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.aosDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.aosKVs {
+  display: grid;
+  gap: 8px;
+}
+
+.aosKV {
+  display: grid;
+  gap: 4px;
+}
+
+.aosK {
+  font-size: 12px;
+  opacity: 0.78;
+  color: rgba(255, 255, 255, 0.90);
+  font-weight: 900;
+}
+
+.aosV {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.92);
+  word-break: break-all;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(12, 18, 32, 0.55);
+}
+
+.aosMsg {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 32, 0.45);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+}

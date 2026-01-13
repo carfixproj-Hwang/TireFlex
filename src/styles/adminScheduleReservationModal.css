@@ -1,0 +1,198 @@
+/* src/styles/adminScheduleReservationModal.css */
+
+/* Backdrop */
+.asrBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+/* Modal shell */
+.asrModal {
+  width: min(980px, 100%);
+  max-height: min(86vh, 920px);
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 14, 22, 0.94);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.58);
+}
+
+/* Sticky header */
+.asrHead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.03));
+}
+
+.asrHeadTitle {
+  font-weight: 950;
+  letter-spacing: -0.4px;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+/* Body */
+.asrBody {
+  padding: 14px;
+  display: grid;
+  gap: 14px;
+}
+
+.asrInfoCard {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.asrTitle {
+  font-weight: 950;
+  letter-spacing: -0.4px;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.asrMeta {
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.86;
+  color: rgba(255, 255, 255, 0.90);
+}
+
+.asrDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.10);
+  margin: 2px 0;
+}
+
+/* Actions */
+.asrActionsCard {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.asrActionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.asrField {
+  display: grid;
+  gap: 6px;
+}
+
+.asrFieldLabel {
+  font-size: 12px;
+  opacity: 0.78;
+  color: rgba(255, 255, 255, 0.90);
+  font-weight: 800;
+}
+
+/* Buttons */
+.asrBtn,
+.asrBtnPrimary,
+.asrBtnSuccess,
+.asrBtnDanger {
+  padding: 11px 14px;
+  border-radius: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.asrBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.asrBtnPrimary {
+  background: rgba(255, 255, 255, 0.92);
+  color: #0b0f18;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  font-weight: 950;
+}
+
+.asrBtnPrimary:hover {
+  filter: brightness(1.02);
+}
+
+.asrBtnSuccess {
+  border: 1px solid rgba(110, 231, 183, 0.28);
+  background: rgba(110, 231, 183, 0.10);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 950;
+}
+
+.asrBtnSuccess:hover {
+  background: rgba(110, 231, 183, 0.14);
+}
+
+.asrBtnDanger {
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  background: rgba(251, 113, 133, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 950;
+}
+
+.asrBtnDanger:hover {
+  background: rgba(251, 113, 133, 0.18);
+}
+
+.asrBtn:disabled,
+.asrBtnPrimary:disabled,
+.asrBtnSuccess:disabled,
+.asrBtnDanger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Footnote */
+.asrNote {
+  font-size: 12px;
+  opacity: 0.78;
+  color: rgba(255, 255, 255, 0.90);
+}
+
+/* Small screens */
+@media (max-width: 560px) {
+  .asrHead {
+    padding: 12px;
+  }
+  .asrBody {
+    padding: 12px;
+  }
+  .asrActionsRow {
+    align-items: stretch;
+  }
+  .asrBtn,
+  .asrBtnPrimary,
+  .asrBtnSuccess,
+  .asrBtnDanger {
+    width: 100%;
+  }
+}

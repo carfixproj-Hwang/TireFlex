@@ -1,5 +1,5 @@
-// src/pages/admin/AdminSchedulePage.tsx
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   adminAssignReservation,
   adminDeleteReservation,
@@ -14,6 +14,13 @@ import {
 } from "../../lib/adminReservations";
 import { adminListBlockedTimesByDate, type AdminBlockedTime } from "../../lib/adminSchedule";
 import { supabase } from "../../lib/supabaseClient";
+
+import "../../styles/adminScheduleReservationModal.css";
+
+function clampInt(n: number, min: number, max: number) {
+  if (!Number.isFinite(n)) return min;
+  return Math.min(max, Math.max(min, Math.round(n)));
+}
 
 function toDateInputValue(d: Date) {
   const yyyy = d.getFullYear();
@@ -170,6 +177,9 @@ function SelectField({
 }
 
 export default function AdminSchedulePage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const styles = useMemo(() => {
     const bg: CSSProperties = {
       position: "fixed",
@@ -214,16 +224,6 @@ export default function AdminSchedulePage() {
       boxShadow: "0 10px 26px rgba(0,0,0,0.28)",
     };
 
-    const btn: CSSProperties = {
-      padding: "11px 14px",
-      borderRadius: 14,
-      border: "1px solid rgba(255,255,255,0.16)",
-      background: "rgba(255,255,255,0.06)",
-      color: "rgba(255,255,255,0.92)",
-      fontWeight: 900,
-      cursor: "pointer",
-    };
-
     const btnPrimary: CSSProperties = {
       padding: "11px 14px",
       borderRadius: 14,
@@ -235,14 +235,15 @@ export default function AdminSchedulePage() {
       boxShadow: "0 16px 34px rgba(0,0,0,0.35)",
     };
 
-    const btnDanger: CSSProperties = {
+    const btnDark: CSSProperties = {
       padding: "11px 14px",
       borderRadius: 14,
-      border: "1px solid rgba(251,113,133,0.35)",
-      background: "rgba(251,113,133,0.14)",
+      border: "1px solid rgba(255,255,255,0.14)",
+      background: "rgba(12,18,32,0.75)",
       color: "rgba(255,255,255,0.92)",
       fontWeight: 950,
       cursor: "pointer",
+      boxShadow: "0 10px 26px rgba(0,0,0,0.28)",
     };
 
     const gridHead: CSSProperties = {
@@ -296,31 +297,6 @@ export default function AdminSchedulePage() {
       border: "1px solid rgba(255,255,255,0.32)",
     };
 
-    const panel: CSSProperties = {
-      marginTop: 12,
-      borderRadius: 18,
-      border: "1px solid rgba(255,255,255,0.14)",
-      background: "rgba(255,255,255,0.05)",
-      backdropFilter: "blur(10px)",
-      boxShadow: "0 10px 40px rgba(0,0,0,0.35)",
-      overflow: "hidden",
-    };
-
-    const panelHead: CSSProperties = {
-      padding: 12,
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      background: "linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04))",
-      borderBottom: "1px solid rgba(255,255,255,0.10)",
-      color: "rgba(255,255,255,0.92)",
-      fontWeight: 950,
-    };
-
-    const panelBody: CSSProperties = { padding: 12, display: "grid", gap: 12 };
-
-    const mono: CSSProperties = { fontSize: 12, opacity: 0.78, color: "rgba(255,255,255,0.90)" };
-
     const msgBar: CSSProperties = {
       marginTop: 10,
       padding: 10,
@@ -339,46 +315,70 @@ export default function AdminSchedulePage() {
       controlRow,
       label,
       input,
-      btn,
       btnPrimary,
-      btnDanger,
+      btnDark,
       gridHead,
       slotRow,
       timePill,
       empty,
       resBtn,
       resBtnActive,
-      panel,
-      panelHead,
-      panelBody,
-      mono,
       msgBar,
     };
   }, []);
 
+  const replaceSearch = (patch: (sp: URLSearchParams) => void) => {
+    const sp = new URLSearchParams(location.search);
+    patch(sp);
+    navigate({ pathname: location.pathname, search: `?${sp.toString()}` }, { replace: true });
+  };
+
   const [dateStr, setDateStr] = useState(() => {
-    const q = new URLSearchParams(window.location.search).get("date");
+    const sp = new URLSearchParams(location.search);
+    const q = sp.get("date");
     return q && /^\d{4}-\d{2}-\d{2}$/.test(q) ? q : toDateInputValue(new Date());
   });
+
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const [reservations, setReservations] = useState<AdminReservationRow[]>([]);
   const [blocked, setBlocked] = useState<AdminBlockedTime[]>([]);
 
-  const [activeResId, setActiveResId] = useState<string | null>(null);
+  const [activeResId, setActiveResId] = useState<string | null>(() => {
+    const sp = new URLSearchParams(location.search);
+    return sp.get("focus") || null;
+  });
+
   const [draftStatus, setDraftStatus] = useState<ReservationStatus>("pending");
   const [saving, setSaving] = useState(false);
 
-  // ✅ 배정/필터
   const [admins, setAdmins] = useState<AdminUserOption[]>([]);
   const [myAdminId, setMyAdminId] = useState<string | null>(null);
   const [onlyMine, setOnlyMine] = useState(false);
   const [assigneeDraft, setAssigneeDraft] = useState<string>("");
 
-  // ✅ Drag & Drop 상태
   const [dragResId, setDragResId] = useState<string | null>(null);
   const [dragOverSlotStart, setDragOverSlotStart] = useState<string | null>(null);
+
+  // ✅ 리프트(동시작업) 용량
+  const [liftCap, setLiftCap] = useState<number>(1);
+  const [liftDraft, setLiftDraft] = useState<number>(1);
+  const [liftSaving, setLiftSaving] = useState<boolean>(false);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search);
+    const qDate = sp.get("date");
+    const qFocus = sp.get("focus");
+
+    if (qDate && /^\d{4}-\d{2}-\d{2}$/.test(qDate) && qDate !== dateStr) {
+      setDateStr(qDate);
+    }
+    if ((qFocus || null) !== (activeResId || null)) {
+      setActiveResId(qFocus || null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   const adminLabelById = useMemo(() => {
     const m = new Map<string, string>();
@@ -397,8 +397,31 @@ export default function AdminSchedulePage() {
   }, [activeResId, reservations]);
 
   useEffect(() => {
-    setActiveResId(null);
+    replaceSearch((sp) => {
+      sp.set("tab", "schedule");
+      sp.set("date", dateStr);
+      sp.delete("focus");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateStr]);
+
+  useEffect(() => {
+    if (!activeResId) return;
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeModal();
+    };
+    window.addEventListener("keydown", onKey);
+
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeResId]);
 
   useEffect(() => {
     if (!activeRes) return;
@@ -425,6 +448,8 @@ export default function AdminSchedulePage() {
       mounted = false;
     };
   }, []);
+
+  const isCapacityConsumer = (status: ReservationStatus) => status !== "canceled" && status !== "no_show";
 
   const slots = useMemo(() => {
     const rows: SlotRow[] = [];
@@ -454,12 +479,28 @@ export default function AdminSchedulePage() {
     setLoading(true);
     setMsg(null);
     try {
-      const [r, b] = await Promise.all([adminListReservationsByDate(dateStr), adminListBlockedTimesByDate(dateStr)]);
+      const [r, b, o] = await Promise.all([
+        adminListReservationsByDate(dateStr),
+        adminListBlockedTimesByDate(dateStr),
+        supabase.from("ops_settings").select("max_batch_qty").eq("id", 1).maybeSingle(),
+      ]);
+
       setReservations(r);
       setBlocked(b);
 
-      if (activeResId && !r.some((x) => x.reservation_id === activeResId)) {
-        setActiveResId(null);
+      if (!o.error) {
+        const cap = clampInt(Number(o.data?.max_batch_qty ?? 1), 1, 20);
+        setLiftCap(cap);
+        setLiftDraft(cap);
+      } else {
+        setLiftCap(1);
+        setLiftDraft(1);
+      }
+
+      const sp = new URLSearchParams(location.search);
+      const focus = sp.get("focus");
+      if (focus && !r.some((x) => x.reservation_id === focus)) {
+        replaceSearch((sp2) => sp2.delete("focus"));
       }
     } catch (e: any) {
       setMsg(e?.message ?? String(e));
@@ -472,6 +513,25 @@ export default function AdminSchedulePage() {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateStr]);
+
+  async function saveLiftCapacity() {
+    const cap = clampInt(Number(liftDraft), 1, 20);
+    try {
+      setLiftSaving(true);
+      setMsg(null);
+
+      const { error } = await supabase.from("ops_settings").upsert({ id: 1, max_batch_qty: cap }, { onConflict: "id" });
+      if (error) throw new Error(error.message);
+
+      setLiftCap(cap);
+      setLiftDraft(cap);
+      await refresh();
+    } catch (e: any) {
+      setMsg(e?.message ?? String(e));
+    } finally {
+      setLiftSaving(false);
+    }
+  }
 
   const activeTimeInfo = useMemo(() => {
     if (!activeRes) return null;
@@ -509,20 +569,41 @@ export default function AdminSchedulePage() {
     return blocked.some((bt) => overlaps(bt.start_at, bt.end_at, candStart, candEnd));
   }
 
-  // ✅ 병합 수정: 멀티데이 예약 겹침 판정은 computeDayBasedWindow로 통일
-  function isOverlappingOtherReservations(resId: string, candStart: string, candEnd: string) {
-    return reservations.some((x) => {
-      if (x.reservation_id === resId) return false;
+  // ✅ 리프트 용량 기반 (정확): 30분 슬라이스별 "동시 겹침 최대값"으로 판단
+  function isActiveStatus(s: ReservationStatus) {
+    return s !== "canceled" && s !== "no_show";
+  }
 
-      if (isDayBased(x.duration_minutes)) {
-        const w = computeDayBasedWindow(x.scheduled_at, x.duration_minutes);
-        return overlaps(w.start, w.end, candStart, candEnd);
+  function getResWindow(r: AdminReservationRow) {
+    if (isDayBased(r.duration_minutes)) {
+      const w = computeDayBasedWindow(r.scheduled_at, r.duration_minutes);
+      return { start: w.start, end: w.end };
+    }
+    return { start: r.scheduled_at, end: addMinutesIso(r.scheduled_at, r.duration_minutes) };
+  }
+
+  function maxOtherOverlapsInWindow(resId: string, candStart: string, candEnd: string) {
+    const stepMs = 30 * 60 * 1000;
+    const s0 = new Date(candStart).getTime();
+    const e0 = new Date(candEnd).getTime();
+    let max = 0;
+
+    for (let t = s0; t < e0; t += stepMs) {
+      const sliceStart = new Date(t).toISOString();
+      const sliceEnd = new Date(Math.min(t + stepMs, e0)).toISOString();
+
+      let cnt = 0;
+      for (const x of reservations) {
+        if (x.reservation_id === resId) continue;
+        if (!isActiveStatus(x.status)) continue;
+
+        const w = getResWindow(x);
+        if (overlaps(w.start, w.end, sliceStart, sliceEnd)) cnt += 1;
       }
+      if (cnt > max) max = cnt;
+    }
 
-      const xStart = x.scheduled_at;
-      const xEnd = addMinutesIso(x.scheduled_at, x.duration_minutes);
-      return overlaps(xStart, xEnd, candStart, candEnd);
-    });
+    return max;
   }
 
   function isWithinBusinessHours(candStart: string, candEnd: string) {
@@ -538,9 +619,11 @@ export default function AdminSchedulePage() {
       res_id: resId,
       new_start: newStart,
     });
+
     if (error) {
       console.error("admin_reschedule_reservation error:", error);
-      throw new Error(error.message);
+      const detail = [error.message, (error as any).details, (error as any).hint].filter(Boolean).join(" / ");
+      throw new Error(detail || "시간 변경 실패");
     }
     if (!data) throw new Error("시간 변경 실패");
   }
@@ -578,8 +661,11 @@ export default function AdminSchedulePage() {
       return;
     }
 
-    if (isOverlappingOtherReservations(resId, candStart, candEnd)) {
-      setMsg("다른 예약과 시간이 겹칩니다.");
+    // ✅ 핵심: '전체 겹침 카운트'가 아니라, 30분 슬라이스별 최대 동시겹침으로 용량 체크
+    const cap = clampInt(Number(liftCap), 1, 20);
+    const maxOther = maxOtherOverlapsInWindow(resId, candStart, candEnd);
+    if (maxOther >= cap) {
+      setMsg(`멀티드래그 실패: 리프트 용량(${cap}) 초과 (동시 겹침 ${maxOther}건)`);
       return;
     }
 
@@ -614,6 +700,20 @@ export default function AdminSchedulePage() {
     return { total, done, pending, confirmed, blockedCount };
   }, [visibleReservations, blocked]);
 
+  const openModal = (reservationId: string) => {
+    setActiveResId(reservationId);
+    replaceSearch((sp) => {
+      sp.set("tab", "schedule");
+      sp.set("date", dateStr);
+      sp.set("focus", reservationId);
+    });
+  };
+
+  const closeModal = () => {
+    setActiveResId(null);
+    replaceSearch((sp) => sp.delete("focus"));
+  };
+
   return (
     <div style={styles.shell}>
       <div style={styles.bg} aria-hidden />
@@ -639,9 +739,38 @@ export default function AdminSchedulePage() {
               <input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} />
               내 배정만 보기
             </label>
+
+            {/* ✅ 운영설정: 리프트 개수 */}
+            <div style={{ display: "grid", gap: 6 }}>
+              <div style={styles.label}>리프트(동시작업)</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={liftDraft}
+                  onChange={(e) => setLiftDraft(clampInt(Number(e.target.value), 1, 20))}
+                  style={{ ...styles.input, width: 120 }}
+                  disabled={liftSaving}
+                />
+                <button
+                  onClick={saveLiftCapacity}
+                  disabled={liftSaving || clampInt(Number(liftDraft), 1, 20) === clampInt(Number(liftCap), 1, 20)}
+                  style={{
+                    ...styles.btnDark,
+                    opacity: liftSaving || liftDraft === liftCap ? 0.6 : 1,
+                    cursor: liftSaving || liftDraft === liftCap ? "not-allowed" : "pointer",
+                  }}
+                  title="ops_settings.max_batch_qty 에 저장"
+                >
+                  {liftSaving ? "저장중..." : "저장"}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end" }}>
+            <span style={chipStyle("info")}>리프트 {Math.max(1, liftCap)}대</span>
             <span style={chipStyle("info")}>총 {stats.total}건</span>
             <span style={chipStyle("ok")}>완료 {stats.done}</span>
             <span style={chipStyle("warn")}>확정 {stats.confirmed}</span>
@@ -650,7 +779,9 @@ export default function AdminSchedulePage() {
           </div>
         </div>
 
-        <div style={styles.gridHead}>09:00 ~ 18:00 (30분 그리드) · 팁: 예약 버튼을 드래그 → 다른 시간칸에 드롭</div>
+        <div style={styles.gridHead}>
+          09:00 ~ 18:00 (30분 그리드) · 동시작업(리프트) {Math.max(1, liftCap)}건 · 팁: 예약 버튼을 드래그 → 다른 시간칸에 드롭
+        </div>
 
         {slots.map((s) => {
           const label = new Date(s.startIso).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
@@ -665,6 +796,11 @@ export default function AdminSchedulePage() {
             : "rgba(255,255,255,0.02)";
 
           const rowOutline = isDragOver ? "2px solid rgba(255,255,255,0.85)" : "1px solid transparent";
+
+          // 슬롯 단위 점유(취소/노쇼 제외)
+          const cap = Math.max(1, liftCap);
+          const occ = s.reservations.filter((r) => isCapacityConsumer(r.status)).length;
+          const capChipKind = occ >= cap ? "danger" : occ > 0 ? "warn" : "info";
 
           return (
             <div
@@ -703,7 +839,12 @@ export default function AdminSchedulePage() {
                   <div style={{ ...chipStyle("danger"), width: "fit-content" }}>
                     ⛔ 차단됨{s.blocked?.reason ? ` · ${s.blocked.reason}` : ""}
                   </div>
-                ) : null}
+                ) : (
+                  <div style={{ ...chipStyle(capChipKind as any), width: "fit-content" }}>
+                    용량 {occ}/{cap}
+                    {occ >= cap ? " · FULL" : ""}
+                  </div>
+                )}
 
                 {hasRes ? (
                   <div style={{ display: "grid", gap: 8 }}>
@@ -720,7 +861,7 @@ export default function AdminSchedulePage() {
                       return (
                         <button
                           key={r.reservation_id}
-                          onClick={() => setActiveResId(r.reservation_id)}
+                          onClick={() => openModal(r.reservation_id)}
                           draggable={draggableOk}
                           onDragStart={(e) => {
                             if (!draggableOk) return;
@@ -773,184 +914,196 @@ export default function AdminSchedulePage() {
 
       {msg ? <div style={styles.msgBar}>{msg}</div> : null}
 
-      {activeRes ? (
-        <div style={styles.panel}>
-          <div style={styles.panelHead}>
-            <div>예약 관리</div>
-            <button onClick={() => setActiveResId(null)} style={{ ...styles.btn, background: "rgba(255,255,255,0.06)" }}>
-              닫기
-            </button>
-          </div>
-
-          <div style={styles.panelBody}>
-            <div style={{ display: "grid", gap: 6 }}>
-              <div style={{ fontWeight: 950, fontSize: 16, color: "rgba(255,255,255,0.94)", letterSpacing: "-0.4px" }}>
-                {activeRes.service_name} · {activeRes.full_name ?? "-"} ({activeRes.phone ?? "-"})
-              </div>
-              <div style={styles.mono}>
-                차종: {activeRes.car_model ?? "-"} · 시간: {activeTimeInfo?.label ?? "-"}
-                {typeof activeRes.quantity === "number" ? ` · 수량:${activeRes.quantity}` : ""}
-              </div>
-              <div style={styles.mono}>
-                시작(원본): {fmtKst(activeRes.scheduled_at)} · 상태: <b>{STATUS_LABEL[activeRes.status] ?? activeRes.status}</b>
-              </div>
-              <div style={styles.mono}>
-                배정: <b>{activeAssignedLabel}</b> · 완료: <b>{activeCompletedLabel}</b> {activeRes.completed_at ? `(${fmtKst(activeRes.completed_at)})` : ""}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              {/* ✅ 상태 */}
-              <div style={{ display: "grid", gap: 6 }}>
-                <div style={{ fontSize: 12, opacity: 0.78, color: "rgba(255,255,255,0.90)" }}>상태</div>
-                <SelectField ariaLabel="상태 변경" value={draftStatus} onChange={(v) => setDraftStatus(v as ReservationStatus)} disabled={saving}>
-                  {(["pending", "confirmed", "completed", "canceled", "no_show"] as ReservationStatus[]).map((s) => (
-                    <option key={s} value={s}>
-                      {STATUS_LABEL[s]}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-
-              <button
-                onClick={async () => {
-                  try {
-                    setSaving(true);
-                    const ok = await adminSetReservationStatus(activeRes.reservation_id, draftStatus);
-                    if (!ok) throw new Error("상태 변경 실패");
-                    await refresh();
-                  } catch (e: any) {
-                    alert(e?.message ?? String(e));
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-                disabled={saving || draftStatus === activeRes.status}
-                style={{
-                  ...styles.btnPrimary,
-                  opacity: saving || draftStatus === activeRes.status ? 0.6 : 1,
-                  cursor: saving || draftStatus === activeRes.status ? "not-allowed" : "pointer",
-                }}
-              >
-                {saving ? "적용중..." : "상태 적용"}
-              </button>
-
-              {/* ✅ 담당자 */}
-              <div style={{ display: "grid", gap: 6 }}>
-                <div style={{ fontSize: 12, opacity: 0.78, color: "rgba(255,255,255,0.90)" }}>담당자</div>
-                <SelectField ariaLabel="담당자 선택" value={assigneeDraft} onChange={(v) => setAssigneeDraft(v)} disabled={saving}>
-                  <option value="">(미배정)</option>
-                  {admins.map((a) => (
-                    <option key={a.user_id} value={a.user_id}>
-                      {a.label}
-                    </option>
-                  ))}
-                </SelectField>
-              </div>
-
-              <button
-                onClick={async () => {
-                  try {
-                    if (!assigneeDraft) return alert("배정할 담당자를 선택하세요.");
-                    setSaving(true);
-                    const ok = await adminAssignReservation(activeRes.reservation_id, assigneeDraft);
-                    if (!ok) throw new Error("배정 실패");
-                    await refresh();
-                  } catch (e: any) {
-                    alert(e?.message ?? String(e));
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-                disabled={saving}
-                style={{ ...styles.btn, opacity: saving ? 0.6 : 1, cursor: saving ? "not-allowed" : "pointer" }}
-              >
-                담당자 배정
-              </button>
-
-              <button
-                onClick={async () => {
-                  try {
-                    setSaving(true);
-                    const ok = await adminUnassignReservation(activeRes.reservation_id);
-                    if (!ok) throw new Error("배정 해제 실패");
-                    setAssigneeDraft("");
-                    await refresh();
-                  } catch (e: any) {
-                    alert(e?.message ?? String(e));
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-                disabled={saving || !activeRes.assigned_admin_id}
-                style={{
-                  ...styles.btn,
-                  opacity: saving || !activeRes.assigned_admin_id ? 0.55 : 1,
-                  cursor: saving || !activeRes.assigned_admin_id ? "not-allowed" : "pointer",
-                }}
-              >
-                배정 해제
-              </button>
-
-              {/* ✅ 완료 */}
-              <button
-                onClick={async () => {
-                  try {
-                    setSaving(true);
-                    const ok = await adminMarkReservationCompleted(activeRes.reservation_id);
-                    if (!ok) throw new Error("완료 처리 실패");
-                    await refresh();
-                    setDraftStatus("completed");
-                  } catch (e: any) {
-                    alert(e?.message ?? String(e));
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-                disabled={saving || activeRes.status === "completed"}
-                style={{
-                  ...styles.btn,
-                  border: "1px solid rgba(110,231,183,0.28)",
-                  background: "rgba(110,231,183,0.10)",
-                  opacity: saving || activeRes.status === "completed" ? 0.55 : 1,
-                  cursor: saving || activeRes.status === "completed" ? "not-allowed" : "pointer",
-                  fontWeight: 950,
-                }}
-                title="완료자(현재 관리자)로 기록됩니다"
-              >
-                {saving ? "처리중..." : "완료 처리(기록)"}
-              </button>
-
-              {/* ✅ 삭제 */}
-              <button
-                onClick={async () => {
-                  const ok1 = confirm("이 예약을 DB에서 완전히 삭제할까요? (되돌릴 수 없음)");
-                  if (!ok1) return;
-
-                  const ok2 = confirm("정말 삭제할까요? 삭제하면 기록이 사라집니다.");
-                  if (!ok2) return;
-
-                  try {
-                    setSaving(true);
-                    const ok = await adminDeleteReservation(activeRes.reservation_id);
-                    if (!ok) throw new Error("삭제 실패");
-                    await refresh();
-                    setActiveResId(null);
-                  } catch (e: any) {
-                    alert(e?.message ?? String(e));
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-                disabled={saving}
-                style={{ ...styles.btnDanger, opacity: saving ? 0.6 : 1, cursor: saving ? "not-allowed" : "pointer" }}
-              >
-                {saving ? "처리중..." : "예약 삭제"}
+      {/* 예약 관리: 깔끔한 모달 */}
+      {activeResId ? (
+        <div
+          className="asrBackdrop"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeModal();
+          }}
+        >
+          <div className="asrModal">
+            <div className="asrHead">
+              <div className="asrHeadTitle">예약 관리</div>
+              <button className="asrBtn" onClick={closeModal}>
+                닫기
               </button>
             </div>
 
-            <div style={{ fontSize: 12, opacity: 0.78, color: "rgba(255,255,255,0.90)" }}>
-              메모: “완료 처리(기록)”을 누르면 <b>completed_admin_id</b>에 현재 관리자 ID가 기록됩니다.
+            <div className="asrBody">
+              {!activeRes ? (
+                <div className="asrMeta">예약 정보를 불러오는 중…</div>
+              ) : (
+                <>
+                  <div className="asrInfoCard">
+                    <div className="asrTitle">
+                      {activeRes.service_name} · {activeRes.full_name ?? "-"} ({activeRes.phone ?? "-"})
+                    </div>
+                    <div className="asrMeta">
+                      차종: {activeRes.car_model ?? "-"} · 시간: {activeTimeInfo?.label ?? "-"}
+                      {typeof activeRes.quantity === "number" ? ` · 수량:${activeRes.quantity}` : ""}
+                    </div>
+                    <div className="asrMeta">
+                      시작(원본): {fmtKst(activeRes.scheduled_at)} · 상태: <b>{STATUS_LABEL[activeRes.status] ?? activeRes.status}</b>
+                    </div>
+                    <div className="asrMeta">
+                      배정: <b>{activeAssignedLabel}</b> · 완료: <b>{activeCompletedLabel}</b>{" "}
+                      {activeRes.completed_at ? `(${fmtKst(activeRes.completed_at)})` : ""}
+                    </div>
+                  </div>
+
+                  <div className="asrActionsCard">
+                    <div className="asrActionsRow">
+                      <div className="asrField">
+                        <div className="asrFieldLabel">상태</div>
+                        <SelectField
+                          ariaLabel="상태 변경"
+                          value={draftStatus}
+                          onChange={(v) => setDraftStatus(v as ReservationStatus)}
+                          disabled={saving}
+                          style={{ minWidth: 170 }}
+                        >
+                          {(["pending", "confirmed", "completed", "canceled", "no_show"] as ReservationStatus[]).map((s) => (
+                            <option key={s} value={s}>
+                              {STATUS_LABEL[s]}
+                            </option>
+                          ))}
+                        </SelectField>
+                      </div>
+
+                      <button
+                        className="asrBtnPrimary"
+                        onClick={async () => {
+                          try {
+                            setSaving(true);
+                            const ok = await adminSetReservationStatus(activeRes.reservation_id, draftStatus);
+                            if (!ok) throw new Error("상태 변경 실패");
+                            await refresh();
+                          } catch (e: any) {
+                            alert(e?.message ?? String(e));
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                        disabled={saving || draftStatus === activeRes.status}
+                      >
+                        {saving ? "적용중..." : "상태 적용"}
+                      </button>
+
+                      <div className="asrField">
+                        <div className="asrFieldLabel">담당자</div>
+                        <SelectField
+                          ariaLabel="담당자 선택"
+                          value={assigneeDraft}
+                          onChange={(v) => setAssigneeDraft(v)}
+                          disabled={saving}
+                          style={{ minWidth: 220 }}
+                        >
+                          <option value="">(미배정)</option>
+                          {admins.map((a) => (
+                            <option key={a.user_id} value={a.user_id}>
+                              {a.label}
+                            </option>
+                          ))}
+                        </SelectField>
+                      </div>
+
+                      <button
+                        className="asrBtn"
+                        onClick={async () => {
+                          try {
+                            if (!assigneeDraft) return alert("배정할 담당자를 선택하세요.");
+                            setSaving(true);
+                            const ok = await adminAssignReservation(activeRes.reservation_id, assigneeDraft);
+                            if (!ok) throw new Error("배정 실패");
+                            await refresh();
+                          } catch (e: any) {
+                            alert(e?.message ?? String(e));
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                        disabled={saving}
+                      >
+                        담당자 배정
+                      </button>
+
+                      <button
+                        className="asrBtn"
+                        onClick={async () => {
+                          try {
+                            setSaving(true);
+                            const ok = await adminUnassignReservation(activeRes.reservation_id);
+                            if (!ok) throw new Error("배정 해제 실패");
+                            setAssigneeDraft("");
+                            await refresh();
+                          } catch (e: any) {
+                            alert(e?.message ?? String(e));
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                        disabled={saving || !activeRes.assigned_admin_id}
+                      >
+                        배정 해제
+                      </button>
+
+                      <button
+                        className="asrBtnSuccess"
+                        onClick={async () => {
+                          try {
+                            setSaving(true);
+                            const ok = await adminMarkReservationCompleted(activeRes.reservation_id);
+                            if (!ok) throw new Error("완료 처리 실패");
+                            await refresh();
+                            setDraftStatus("completed");
+                          } catch (e: any) {
+                            alert(e?.message ?? String(e));
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                        disabled={saving || activeRes.status === "completed"}
+                        title="완료자(현재 관리자)로 기록됩니다"
+                      >
+                        {saving ? "처리중..." : "완료 처리(기록)"}
+                      </button>
+
+                      <button
+                        className="asrBtnDanger"
+                        onClick={async () => {
+                          const ok1 = confirm("이 예약을 DB에서 완전히 삭제할까요? (되돌릴 수 없음)");
+                          if (!ok1) return;
+
+                          const ok2 = confirm("정말 삭제할까요? 삭제하면 기록이 사라집니다.");
+                          if (!ok2) return;
+
+                          try {
+                            setSaving(true);
+                            const ok = await adminDeleteReservation(activeRes.reservation_id);
+                            if (!ok) throw new Error("삭제 실패");
+                            await refresh();
+                            closeModal();
+                          } catch (e: any) {
+                            alert(e?.message ?? String(e));
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                        disabled={saving}
+                      >
+                        {saving ? "처리중..." : "예약 삭제"}
+                      </button>
+                    </div>
+
+                    <div className="asrNote">
+                      메모: “완료 처리(기록)”을 누르면 <b>completed_admin_id</b>에 현재 관리자 ID가 기록됩니다.
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

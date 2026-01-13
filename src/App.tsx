@@ -16,7 +16,7 @@ import AdminServicesPage from "./pages/admin/AdminServicesPage";
 import AdminOpsPage from "./pages/admin/AdminOpsPage";
 import AdminCalendarPage from "./pages/AdminCalendarPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
-import AdminStaffPage from "./pages/admin/AdminStaffPage";
+// import AdminStaffPage from "./pages/admin/AdminStaffPage";
 import OwnerStaffPage from "./pages/admin/OwnerStaffPage";
 
 import OwnerServiceHistoryPage from "./pages/owner/OwnerServiceHistoryPage";
@@ -281,14 +281,14 @@ function AppInner() {
           }
         />
 
-        <Route
+        {/* <Route
           path="/admin/staff"
           element={
             <ProtectedRoute isAllowed={isAuthed && isOwner} redirectTo="/">
               <AdminStaffPage />
             </ProtectedRoute>
           }
-        />
+        /> */}
 
         <Route
           path="/owner/staff"
