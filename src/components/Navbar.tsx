@@ -38,6 +38,10 @@ export default function Navbar({ isAuthed, isAdmin, role }: Props) {
       { to: "/admin/calendar", label: "관리자 · 달력", roles: ["staff", "owner"] },
       { to: "/admin/services", label: "관리자 · 아이템", roles: ["staff", "owner"] },
       { to: "/admin/users", label: "관리자 · 회원 관리", roles: ["staff", "owner"] },
+
+      // ✅ 오너 전용
+      { to: "/owner/history", label: "오너 · 전체 정비 내역", roles: ["owner"] },
+      { to: "/owner/estimates", label: "오너 · 견적서 관리", roles: ["owner"] },
       { to: "/admin/staff", label: "오너 · 직원 관리", roles: ["owner"] },
       { to: "/owner/staff", label: "오너 · 전용 페이지", roles: ["owner"] },
     ],

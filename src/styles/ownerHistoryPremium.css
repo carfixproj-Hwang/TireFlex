@@ -1,0 +1,444 @@
+/* src/styles/ownerHistoryPremium.css */
+
+:root {
+  --oh-bg0: #07080d;
+  --oh-bg1: #0b0d16;
+
+  --oh-text: rgba(255, 255, 255, 0.92);
+  --oh-muted: rgba(255, 255, 255, 0.68);
+
+  --oh-line: rgba(255, 255, 255, 0.10);
+  --oh-glass: rgba(255, 255, 255, 0.06);
+
+  --oh-ok: rgba(110, 231, 183, 1);
+  --oh-danger: rgba(251, 113, 133, 1);
+  --oh-info: rgba(160, 190, 255, 1);
+}
+
+.ohShell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 14px 14px 28px;
+  color: var(--oh-text);
+}
+
+.ohBg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(1200px 900px at 20% 10%, rgba(160, 190, 255, 0.12), transparent 60%),
+    radial-gradient(900px 700px at 80% 20%, rgba(210, 220, 255, 0.09), transparent 60%),
+    radial-gradient(900px 700px at 70% 90%, rgba(140, 255, 230, 0.07), transparent 60%),
+    linear-gradient(180deg, var(--oh-bg0), var(--oh-bg1));
+}
+
+.ohTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ohTitle {
+  display: grid;
+  gap: 4px;
+}
+
+.ohTitleMain {
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  font-size: 18px;
+}
+
+.ohTitleSub {
+  font-size: 12px;
+  color: var(--oh-muted);
+}
+
+.ohTopActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.ohFilters {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+}
+
+.ohField {
+  display: grid;
+  gap: 6px;
+}
+
+.ohFieldWide {
+  min-width: 260px;
+  flex: 1;
+}
+
+.ohLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  opacity: 0.85;
+  font-weight: 900;
+}
+
+.ohInput {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 32, 0.75);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+  min-width: 160px;
+}
+
+.ohBtn {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.92);
+  color: #0b0f18;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.40);
+}
+
+.ohBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ohBtnGhost {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.ohBtnGhost:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.ohBtnDanger {
+  border: 1px solid rgba(251, 113, 133, 0.35);
+  background: rgba(251, 113, 133, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.ohHint {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ohChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.ohChipOk {
+  border: 1px solid rgba(110, 231, 183, 0.25);
+  background: rgba(110, 231, 183, 0.10);
+}
+
+.ohChipDanger {
+  border: 1px solid rgba(251, 113, 133, 0.25);
+  background: rgba(251, 113, 133, 0.10);
+}
+
+.ohMsg {
+  margin-left: auto;
+  color: rgba(251, 113, 133, 0.95);
+  font-weight: 900;
+}
+
+.ohList {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.ohRow {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 16px 54px rgba(0, 0, 0, 0.30);
+}
+
+.ohRowMain {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.ohRowTitle {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ohService {
+  font-weight: 950;
+  letter-spacing: -0.2px;
+}
+
+.ohStatus {
+  font-size: 12px;
+  font-weight: 950;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ohStatus--completed {
+  border: 1px solid rgba(110, 231, 183, 0.25);
+  background: rgba(110, 231, 183, 0.10);
+}
+
+.ohStatus--canceled,
+.ohStatus--no_show {
+  border: 1px solid rgba(251, 113, 133, 0.25);
+  background: rgba(251, 113, 133, 0.10);
+}
+
+.ohRowSub,
+.ohRowSub2 {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.78);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ohDot {
+  opacity: 0.6;
+}
+
+.ohRowActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.ohEmpty {
+  padding: 18px 12px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.65);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ohPager {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
+}
+
+.ohPagerInfo {
+  font-weight: 950;
+  opacity: 0.9;
+}
+
+/* Modal */
+.ohModalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 70;
+  padding: 16px;
+}
+
+.ohModal {
+  width: min(1040px, 100%);
+  max-height: min(86vh, 920px);
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 14, 24, 0.92);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.ohModalHead {
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.ohModalTitle {
+  font-weight: 950;
+  letter-spacing: -0.4px;
+}
+
+.ohModalSub {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.ohIconBtn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.ohModalBody {
+  padding: 14px;
+  overflow: auto;
+}
+
+.ohModalFoot {
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.ohEstimateGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.ohCard {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: 0 16px 54px rgba(0, 0, 0, 0.30);
+}
+
+.ohCardTitle {
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  margin-bottom: 10px;
+}
+
+.ohKV {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ohK {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.ohV {
+  margin-top: 6px;
+  font-weight: 900;
+}
+
+.ohItems {
+  display: grid;
+  gap: 10px;
+}
+
+.ohItemRow {
+  display: grid;
+  grid-template-columns: 1.6fr 0.6fr 0.9fr 0.9fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.ohLineSum {
+  text-align: right;
+  font-weight: 950;
+  opacity: 0.92;
+}
+
+.ohItemActions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ohTotal {
+  font-weight: 950;
+  opacity: 0.95;
+}
+
+.ohTotal b {
+  margin-left: 8px;
+  font-size: 18px;
+}
+
+.ohTextarea {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 32, 0.75);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+  resize: vertical;
+}
+
+@media (max-width: 860px) {
+  .ohItemRow {
+    grid-template-columns: 1fr 0.6fr 0.9fr 0.9fr auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .ohKV {
+    grid-template-columns: 1fr;
+  }
+  .ohItemRow {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ohLineSum {
+    text-align: left;
+  }
+}

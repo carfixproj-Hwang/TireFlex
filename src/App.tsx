@@ -19,6 +19,9 @@ import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminStaffPage from "./pages/admin/AdminStaffPage";
 import OwnerStaffPage from "./pages/admin/OwnerStaffPage";
 
+import OwnerServiceHistoryPage from "./pages/owner/OwnerServiceHistoryPage";
+import OwnerEstimatesPage from "./pages/owner/OwnerEstimatesPage";
+
 import DebugPage from "./pages/DebugPage";
 
 import "./styles/appShell.css";
@@ -292,6 +295,25 @@ function AppInner() {
           element={
             <ProtectedRoute isAllowed={isAuthed && isOwner} redirectTo="/">
               <OwnerStaffPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ✅ 오너 전용: 전체 정비내역 / 견적서 관리 */}
+        <Route
+          path="/owner/history"
+          element={
+            <ProtectedRoute isAllowed={isAuthed && isOwner} redirectTo="/">
+              <OwnerServiceHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/owner/estimates"
+          element={
+            <ProtectedRoute isAllowed={isAuthed && isOwner} redirectTo="/">
+              <OwnerEstimatesPage />
             </ProtectedRoute>
           }
         />

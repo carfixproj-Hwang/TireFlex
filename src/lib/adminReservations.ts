@@ -6,6 +6,9 @@ export type ReservationStatus = "pending" | "confirmed" | "completed" | "cancele
 export type AdminReservationRow = {
   reservation_id: string;
 
+  // ✅ 장기수리(분할 예약) 묶음 키
+  root_reservation_id?: string | null;
+
   scheduled_at: string;
   duration_minutes: number;
   status: ReservationStatus;
@@ -69,6 +72,18 @@ export async function adminListReservationsByDate(dateStr: string): Promise<Admi
 
   // ✅ fallback (구버전)
   const { data, error } = await supabase.rpc("admin_list_reservations_by_date", { slot_date: dateStr });
+  if (error) throw error;
+  return (data ?? []) as AdminReservationRow[];
+}
+
+// ✅ 기간 조회 (오너 전체 정비내역 등)
+export async function adminListReservationsByRange(startDate: string, endDate: string): Promise<AdminReservationRow[]> {
+  // ✅ v2 우선
+  const v2 = await supabase.rpc("admin_list_reservations_by_range_v2", { start_date: startDate, end_date: endDate });
+  if (!v2.error) return (v2.data ?? []) as AdminReservationRow[];
+
+  // ✅ fallback
+  const { data, error } = await supabase.rpc("admin_list_reservations_by_range", { start_date: startDate, end_date: endDate });
   if (error) throw error;
   return (data ?? []) as AdminReservationRow[];
 }

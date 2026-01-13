@@ -47,6 +47,13 @@ function fmtKST(iso: string) {
   return d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
 }
 
+function fmtKSTShort(iso: string) {
+  const d = new Date(iso);
+  const md = d.toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
+  const tm = d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+  return `${md} ${tm}`;
+}
+
 function useSpotlightVars<T extends HTMLElement>(containerRef: React.RefObject<T | null>) {
   useEffect(() => {
     const el = containerRef.current;
@@ -130,7 +137,7 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
     data: null,
   });
 
-  // ✅ 최근 7일 완료 통계/리스트 (개인정보 없음)
+  // ✅ 최근 7일 완료 통계/리스트 (개인정보 없음, 장기수리=1건)
   const [recentDone, setRecentDone] = useState<LoadState<RecentCompletedSummary>>({
     loading: true,
     error: null,
@@ -265,7 +272,7 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
     };
   }, [items.loading, items.data]);
 
-  // ✅ 5) 최근 7일 완료 통계/리스트 (RLS 영향 없이 안전 RPC)
+  // ✅ 5) 최근 7일 완료 통계/리스트 (장기수리=1건 집계는 RPC에서 처리)
   useEffect(() => {
     let alive = true;
 
@@ -447,9 +454,9 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
                 </div>
               </div>
 
-              {/* ✅ 최근 7일 완료 내역(개인정보 없음) */}
+              {/* ✅ 최근 7일 완료 내역(개인정보 없음, 장기수리=1건) */}
               <div className="opsBox">
-                <div className="opsLabel">최근 7일 정비 완료</div>
+                <div className="opsLabel">최근 7일 정비 완료 (작업 기준)</div>
                 <div className="opsValue">
                   {recentDone.loading ? "불러오는 중…" : `${recentDone.data?.count ?? 0}건 완료`}
                 </div>
@@ -462,7 +469,7 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
 
                   {(recentDone.data?.items ?? []).map((x, idx) => (
                     <div className="blockRow" key={`${x.completed_at}-${idx}`}>
-                      <span className="blockTime">{fmtKST(x.completed_at)}</span>
+                      <span className="blockTime">{fmtKSTShort(x.completed_at)}</span>
                       <span className="blockReason">{x.service_name ?? "정비"}</span>
                     </div>
                   ))}
