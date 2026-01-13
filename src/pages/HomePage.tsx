@@ -321,7 +321,7 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
       open: formatTimeHHMM(d.open_time),
       close: formatTimeHHMM(d.close_time),
       slot: d.slot_minutes != null ? `${d.slot_minutes}분` : null,
-      capacity: d.capacity != null ? `동시 작업 ${d.capacity}대` : null,
+      capacity: d.capacity != null ? `작업 가능 ${d.capacity}대` : null,
       tz: d.tz ? String(d.tz) : "Asia/Seoul",
       maxBatch: d.max_batch_qty != null ? `리프트 개수 ${d.max_batch_qty}개` : null,
     };
