@@ -3,6 +3,7 @@ import { supabase } from "./supabaseClient";
 
 export type MyServiceHistoryRow = {
   reservation_id: string;
+  root_reservation_id: string | null; // ✅ 추가
   scheduled_at: string;
   completed_at: string | null;
   status: string;
@@ -28,6 +29,7 @@ export async function myListServiceHistory(params?: {
 
   return (data ?? []).map((x: any) => ({
     reservation_id: String(x.reservation_id),
+    root_reservation_id: x.root_reservation_id ? String(x.root_reservation_id) : null, // ✅ 매핑
     scheduled_at: String(x.scheduled_at),
     completed_at: x.completed_at ? String(x.completed_at) : null,
     status: String(x.status),

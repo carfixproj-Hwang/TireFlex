@@ -12,6 +12,12 @@ function fmtKST(iso: string) {
   });
 }
 
+function addMinutesIso(iso: string, mins: number) {
+  const d = new Date(iso);
+  d.setMinutes(d.getMinutes() + mins);
+  return d.toISOString();
+}
+
 function badgeStyle(kind: "ok" | "warn" | "info" | "danger"): CSSProperties {
   const base: CSSProperties = {
     display: "inline-flex",
@@ -48,14 +54,30 @@ function statusKind(status: string): "ok" | "warn" | "info" | "danger" {
   return "info";
 }
 
-function safeStr(v: any) {
-  return (v ?? "").toString().trim();
-}
-
 function clampInt(n: number, min: number, max: number) {
   if (!Number.isFinite(n)) return min;
   return Math.min(max, Math.max(min, Math.round(n)));
 }
+
+function pickGroupStatus(statuses: string[]) {
+  // 진행중이 하나라도 있으면 그쪽이 우선
+  if (statuses.some((s) => s === "pending")) return "pending";
+  if (statuses.some((s) => s === "confirmed")) return "confirmed";
+  if (statuses.some((s) => s === "completed")) return "completed";
+  if (statuses.some((s) => s === "canceled")) return "canceled";
+  if (statuses.some((s) => s === "no_show")) return "no_show";
+  return statuses[0] ?? "unknown";
+}
+
+type DisplayRow = MyServiceHistoryRow & {
+  __group_key: string;
+  __group_count: number;
+  __total_duration_minutes: number;
+  __range_start_iso: string;
+  __range_end_iso: string;
+  __group_status: string;
+  __group_completed_at: string | null;
+};
 
 export default function MyServiceHistoryPage() {
   const styles = useMemo(() => {
@@ -141,138 +163,62 @@ export default function MyServiceHistoryPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [rows, setRows] = useState<MyServiceHistoryRow[]>([]);
 
-  /**
-   * ✅ “5일 작업(540분 x N)”이 여러 row로 내려오면, 한 카드로 합치기
-   * - 베스트: root_reservation_id 같은 그룹키가 내려오면 그걸로 묶음
-   * - 없으면: (service_name/problem/insurance/quantity/admin_note + status + completed_at) 기준으로 묶고,
-   *          날짜가 띄엄띄엄이어도 같은 작업이면 한 덩어리로 합침
-   * - 오탐 방지: 최소 3건 이상일 때만 “분할 작업”으로 그룹화
-   */
-  const displayRows = useMemo(() => {
-    const src = [...rows].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+  const displayRows = useMemo<DisplayRow[]>(() => {
+    const groups = new Map<string, MyServiceHistoryRow[]>();
 
-    const getRootKey = (r: MyServiceHistoryRow) => {
-      const anyR = r as any;
-      return (
-        anyR.root_reservation_id ??
-        anyR.rootReservationId ??
-        anyR.root_id ??
-        anyR.batch_id ??
-        anyR.group_id ??
-        anyR.bundle_id ??
-        null
-      );
-    };
-
-    const isWorkdayChunk = (r: MyServiceHistoryRow) => Number(r.duration_minutes) === 540;
-
-    const baseKey = (r: MyServiceHistoryRow) => {
-      // 가능한 필드만으로 “같은 작업” 판별 키
-      // (service_item_id가 있으면 더 정확해짐)
-      const anyR = r as any;
-      return [
-        safeStr(anyR.service_item_id),
-        safeStr(r.service_name),
-        safeStr(r.problem),
-        String(!!r.insurance),
-        safeStr(r.quantity),
-        safeStr(r.admin_note),
-      ].join("|");
-    };
-
-    const withMeta = (
-      rep: MyServiceHistoryRow,
-      groupKey: string,
-      group: MyServiceHistoryRow[],
-    ) => {
-      const sorted = [...group].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
-      return {
-        ...(rep as any),
-        __group_key: groupKey,
-        __group_count: sorted.length,
-        __range_start_iso: sorted[0].scheduled_at,
-        __range_end_iso: sorted[sorted.length - 1].scheduled_at,
-      } as MyServiceHistoryRow & {
-        __group_key: string;
-        __group_count: number;
-        __range_start_iso: string;
-        __range_end_iso: string;
-      };
-    };
-
-    const used = new Set<string>();
-    const out: Array<
-      MyServiceHistoryRow & {
-        __group_key: string;
-        __group_count: number;
-        __range_start_iso: string;
-        __range_end_iso: string;
-      }
-    > = [];
-
-    // 1) rootKey로 그룹(있으면 최우선)
-    const rootMap = new Map<string, MyServiceHistoryRow[]>();
-    for (const r of src) {
-      const root = getRootKey(r);
-      if (!root) continue;
-      const key = String(root);
-      const arr = rootMap.get(key) ?? [];
+    for (const r of rows) {
+      const key = r.root_reservation_id ?? r.reservation_id; // ✅ root 기준으로 묶기
+      const k = String(key);
+      const arr = groups.get(k) ?? [];
       arr.push(r);
-      rootMap.set(key, arr);
+      groups.set(k, arr);
     }
 
-    for (const [key, group] of rootMap.entries()) {
-      for (const r of group) used.add(r.reservation_id);
-      const rep = [...group].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())[0];
-      out.push(withMeta(rep, `root:${key}`, group));
-    }
+    const out: DisplayRow[] = [];
 
-    // 2) rootKey가 없는 경우: “분할 작업(540분)”을 heuristic으로 묶기
-    //    - completed_at이 동일하면 같은 작업일 확률이 높음(특히 완료 화면)
-    //    - 날짜 갭이 있어도 묶는다(차단/주말/용량FULL 때문에).
-    const heurMap = new Map<string, MyServiceHistoryRow[]>();
-    for (const r of src) {
-      if (used.has(r.reservation_id)) continue;
-      if (!isWorkdayChunk(r)) continue;
+    for (const [k, arr] of groups.entries()) {
+      const sorted = [...arr].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
 
-      const anyR = r as any;
-      const completedKey = safeStr(anyR.completed_at ?? (r as any).completed_at ?? "");
-      const key = ["heur", baseKey(r), safeStr(r.status), completedKey].join("::");
-      const arr = heurMap.get(key) ?? [];
-      arr.push(r);
-      heurMap.set(key, arr);
-    }
+      const totalDur = sorted.reduce((sum, x) => sum + Number(x.duration_minutes || 0), 0);
 
-    // 그룹 확정(최소 3건 이상만)
-    const heurGroupedIds = new Set<string>();
-    for (const [key, group] of heurMap.entries()) {
-      if (group.length < 3) continue; // 오탐 방지: 2건은 보통 그냥 별개 예약일 확률 ↑
+      const rangeStart = sorted[0]?.scheduled_at ?? "";
+      let rangeEnd = rangeStart;
 
-      // 너무 긴 기간(예: 2달)까지 묶이는 사고 방지
-      const sorted = [...group].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
-      const spanDays = Math.round(
-        (new Date(sorted[sorted.length - 1].scheduled_at).getTime() - new Date(sorted[0].scheduled_at).getTime()) / (24 * 60 * 60 * 1000),
-      );
-      if (spanDays > 45) continue;
-
-      for (const r of group) {
-        used.add(r.reservation_id);
-        heurGroupedIds.add(r.reservation_id);
+      let latestEndMs = -Infinity;
+      for (const x of sorted) {
+        const endIso = addMinutesIso(x.scheduled_at, x.duration_minutes);
+        const ms = new Date(endIso).getTime();
+        if (ms > latestEndMs) {
+          latestEndMs = ms;
+          rangeEnd = endIso;
+        }
       }
+
+      const statuses = sorted.map((x) => x.status);
+      const groupStatus = pickGroupStatus(statuses);
+
+      const completedCandidates = sorted
+        .map((x) => x.completed_at)
+        .filter((v): v is string => !!v)
+        .map((v) => new Date(v).getTime());
+      const groupCompletedAt =
+        completedCandidates.length > 0 ? new Date(Math.max(...completedCandidates)).toISOString() : null;
+
       const rep = sorted[0];
-      out.push(withMeta(rep, key, group));
+
+      out.push({
+        ...rep,
+        __group_key: k,
+        __group_count: sorted.length,
+        __total_duration_minutes: totalDur,
+        __range_start_iso: rangeStart,
+        __range_end_iso: rangeEnd,
+        __group_status: groupStatus,
+        __group_completed_at: groupCompletedAt,
+      });
     }
 
-    // 3) 나머지는 단건으로
-    for (const r of src) {
-      if (used.has(r.reservation_id)) continue;
-      used.add(r.reservation_id);
-      out.push(withMeta(r, `single:${r.reservation_id}`, [r]));
-    }
-
-    // 최신순
     out.sort((a, b) => new Date(b.__range_start_iso).getTime() - new Date(a.__range_start_iso).getTime());
-
     return out;
   }, [rows]);
 
@@ -317,7 +263,11 @@ export default function MyServiceHistoryPage() {
 
             <label style={{ display: "grid", gap: 6 }}>
               <span style={styles.label}>최대 표시</span>
-              <select value={String(limit)} onChange={(e) => setLimit(clampInt(Number(e.target.value), 1, 500))} style={styles.input}>
+              <select
+                value={String(limit)}
+                onChange={(e) => setLimit(clampInt(Number(e.target.value), 1, 200))}
+                style={styles.input}
+              >
                 {[20, 50, 100, 200].map((n) => (
                   <option key={n} value={String(n)}>
                     {n}건
@@ -345,36 +295,38 @@ export default function MyServiceHistoryPage() {
           ) : null}
 
           {displayRows.map((r) => {
-            const groupCount = Math.max(1, Number((r as any).__group_count ?? 1));
-            const rangeStart = String((r as any).__range_start_iso ?? r.scheduled_at);
-            const rangeEnd = String((r as any).__range_end_iso ?? r.scheduled_at);
-            const key = String((r as any).__group_key ?? r.reservation_id);
+            const groupCount = r.__group_count;
+            const showGrouped = groupCount > 1;
 
-            const showRange = groupCount > 1;
+            const st = showGrouped ? r.__group_status : r.status;
+            const doneAt = showGrouped ? r.__group_completed_at : r.completed_at;
+
+            const durLabel = showGrouped ? `총 ${r.__total_duration_minutes}분` : `${r.duration_minutes}분`;
 
             return (
-              <div key={key} style={styles.card}>
+              <div key={r.__group_key} style={styles.card}>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                   <div style={styles.title}>{r.service_name}</div>
-                  <span style={badgeStyle(statusKind(r.status))}>{statusLabel(r.status)}</span>
+                  <span style={badgeStyle(statusKind(st))}>{statusLabel(st)}</span>
 
-                  {groupCount > 1 ? <span style={badgeStyle("warn")}>분할 작업({groupCount}건)</span> : null}
+                  {showGrouped ? <span style={badgeStyle("warn")}>분할 {groupCount}건</span> : null}
 
                   <span style={badgeStyle("info")}>
-                    {r.duration_minutes}분{typeof r.quantity === "number" ? ` · 수량 ${r.quantity}` : ""}
+                    {durLabel}
+                    {typeof r.quantity === "number" ? ` · 수량 ${r.quantity}` : ""}
                   </span>
                 </div>
 
                 <div style={styles.mono}>
-                  {showRange ? (
+                  {showGrouped ? (
                     <>
-                      작업기간: {fmtKST(rangeStart)} ~ {fmtKST(rangeEnd)}
-                      {r.completed_at ? ` · 완료: ${fmtKST(r.completed_at)}` : ""}
+                      작업기간: {fmtKST(r.__range_start_iso)} ~ {fmtKST(r.__range_end_iso)}
+                      {doneAt ? ` · 완료: ${fmtKST(doneAt)}` : ""}
                     </>
                   ) : (
                     <>
                       예약시간: {fmtKST(r.scheduled_at)}
-                      {r.completed_at ? ` · 완료: ${fmtKST(r.completed_at)}` : ""}
+                      {doneAt ? ` · 완료: ${fmtKST(doneAt)}` : ""}
                     </>
                   )}
                 </div>
