@@ -3,7 +3,9 @@ import { supabase } from "./supabaseClient";
 
 export type MyServiceHistoryRow = {
   reservation_id: string;
-  root_reservation_id: string | null; // ✅ 추가
+  // ✅ 장기/분할 예약을 한 건으로 묶기 위한 루트 ID (RPC가 내려주면 사용)
+  root_reservation_id?: string | null;
+
   scheduled_at: string;
   completed_at: string | null;
   status: string;
@@ -17,10 +19,7 @@ export type MyServiceHistoryRow = {
   admin_note: string | null;
 };
 
-export async function myListServiceHistory(params?: {
-  limit?: number;
-  onlyCompleted?: boolean;
-}): Promise<MyServiceHistoryRow[]> {
+export async function myListServiceHistory(params?: { limit?: number; onlyCompleted?: boolean }): Promise<MyServiceHistoryRow[]> {
   const limit_n = Math.max(1, Math.min(200, Math.floor(Number(params?.limit ?? 50) || 50)));
   const only_completed = params?.onlyCompleted ?? true;
 
@@ -29,7 +28,8 @@ export async function myListServiceHistory(params?: {
 
   return (data ?? []).map((x: any) => ({
     reservation_id: String(x.reservation_id),
-    root_reservation_id: x.root_reservation_id ? String(x.root_reservation_id) : null, // ✅ 매핑
+    root_reservation_id: x.root_reservation_id != null ? String(x.root_reservation_id) : null,
+
     scheduled_at: String(x.scheduled_at),
     completed_at: x.completed_at ? String(x.completed_at) : null,
     status: String(x.status),

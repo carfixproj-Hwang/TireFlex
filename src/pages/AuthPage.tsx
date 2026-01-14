@@ -10,9 +10,13 @@ function trim(v: string) {
   return (v ?? "").trim();
 }
 
-// function cx(...xs: Array<string | false | null | undefined>) {
-//   return xs.filter(Boolean).join(" ");
-// }
+// ✅ 공백(whitespace) 금지 유틸
+function stripWhitespace(v: string) {
+  return String(v ?? "").replace(/\s+/g, "");
+}
+function hasWhitespace(v: string) {
+  return /\s/.test(String(v ?? ""));
+}
 
 export default function AuthPage() {
   const nav = useNavigate();
@@ -185,6 +189,25 @@ export default function AuthPage() {
     };
   }, []);
 
+  // ✅ 공백 금지 핸들러(입력/붙여넣기 공통)
+  const onPwChange = (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const cleaned = stripWhitespace(raw);
+    setter(cleaned);
+  };
+
+  const onPwPaste = (setter: (v: string) => void) => (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData("text");
+    const cleaned = stripWhitespace(text);
+    setter(cleaned);
+  };
+
+  const blockSpaceKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // spacebar
+    if (e.key === " ") e.preventDefault();
+  };
+
   function switchMode(next: Mode) {
     setMode(next);
     setMsg(null);
@@ -243,6 +266,7 @@ export default function AuthPage() {
 
     if (!e) return setMsg("이메일을 입력하세요.");
     if (!p) return setMsg("비밀번호를 입력하세요.");
+    if (hasWhitespace(p)) return setMsg("비밀번호에는 공백을 사용할 수 없습니다.");
 
     setLoading(true);
     setMsg(null);
@@ -274,6 +298,7 @@ export default function AuthPage() {
 
     if (!e) return setMsg("이메일을 입력하세요.");
     if (!p || p.length < 6) return setMsg("비밀번호는 6자 이상으로 입력하세요.");
+    if (hasWhitespace(p)) return setMsg("비밀번호에는 공백을 사용할 수 없습니다.");
 
     setLoading(true);
     setMsg(null);
@@ -443,6 +468,7 @@ export default function AuthPage() {
     const p2 = newPw2;
 
     if (!p1 || p1.length < 6) return setMsg("새 비밀번호는 6자 이상으로 입력하세요.");
+    if (hasWhitespace(p1) || hasWhitespace(p2)) return setMsg("비밀번호에는 공백을 사용할 수 없습니다.");
     if (p1 !== p2) return setMsg("새 비밀번호가 서로 다릅니다.");
 
     setLoading(true);
@@ -467,7 +493,19 @@ export default function AuthPage() {
   }
 
   const actionLabel =
-    loading ? "처리중..." : mode === "login" ? "로그인" : mode === "signup" ? "회원가입" : mode === "verify" ? "인증 완료" : resetStep === "request" ? "코드 전송" : resetStep === "verify" ? "코드 확인" : "비밀번호 변경";
+    loading
+      ? "처리중..."
+      : mode === "login"
+        ? "로그인"
+        : mode === "signup"
+          ? "회원가입"
+          : mode === "verify"
+            ? "인증 완료"
+            : resetStep === "request"
+              ? "코드 전송"
+              : resetStep === "verify"
+                ? "코드 확인"
+                : "비밀번호 변경";
 
   async function onPrimary() {
     if (mode === "login") return doLogin();
@@ -493,13 +531,29 @@ export default function AuthPage() {
         <div style={styles.body}>
           {/* Segmented */}
           <div style={styles.segWrap}>
-            <button type="button" disabled={loading} onClick={() => switchMode("login")} style={mode === "login" ? styles.segBtnActive : styles.segBtnBase}>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => switchMode("login")}
+              style={mode === "login" ? styles.segBtnActive : styles.segBtnBase}
+            >
               로그인
             </button>
-            <button type="button" disabled={loading} onClick={() => switchMode("signup")} style={mode === "signup" ? styles.segBtnActive : styles.segBtnBase}>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => switchMode("signup")}
+              style={mode === "signup" ? styles.segBtnActive : styles.segBtnBase}
+            >
               회원가입
             </button>
-            <button type="button" disabled={loading} onClick={() => switchMode("verify")} style={mode === "verify" ? styles.segBtnActive : styles.segBtnBase} title="메일 인증코드(Token)">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => switchMode("verify")}
+              style={mode === "verify" ? styles.segBtnActive : styles.segBtnBase}
+              title="메일 인증코드(Token)"
+            >
               이메일 인증
             </button>
             <button
@@ -525,7 +579,11 @@ export default function AuthPage() {
             />
             {showReset ? (
               <div style={{ ...styles.hint, marginTop: 8 }}>
-                {resetStep === "request" ? "메일로 재설정 코드를 보냅니다." : resetStep === "verify" ? "메일에 온 Token을 입력해 주세요." : "새 비밀번호를 설정하세요."}
+                {resetStep === "request"
+                  ? "메일로 재설정 코드를 보냅니다."
+                  : resetStep === "verify"
+                    ? "메일에 온 Token을 입력해 주세요."
+                    : "새 비밀번호를 설정하세요."}
               </div>
             ) : null}
           </div>
@@ -536,15 +594,18 @@ export default function AuthPage() {
               <div style={styles.label}>비밀번호</div>
               <input
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={onPwChange(setPassword)}
+                onPaste={onPwPaste(setPassword)}
+                onKeyDown={(e) => {
+                  blockSpaceKey(e);
+                  if (e.key === "Enter") (mode === "login" ? doLogin : doSignup)();
+                }}
                 placeholder="••••••••"
                 type="password"
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 style={styles.input}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") (mode === "login" ? doLogin : doSignup)();
-                }}
               />
+              <div style={{ ...styles.hint, marginTop: 8 }}>* 비밀번호에는 공백을 사용할 수 없습니다.</div>
             </div>
           ) : null}
 
@@ -564,7 +625,12 @@ export default function AuthPage() {
               />
 
               <div style={{ ...styles.row, marginTop: 10 }}>
-                <button type="button" onClick={resendSignupOtp} disabled={loading} style={{ ...styles.btn, opacity: loading ? 0.6 : 1 }}>
+                <button
+                  type="button"
+                  onClick={resendSignupOtp}
+                  disabled={loading}
+                  style={{ ...styles.btn, opacity: loading ? 0.6 : 1 }}
+                >
                   코드 재전송
                 </button>
                 <span style={styles.chip}>메일 템플릿에 Token 출력이 필요해요</span>
@@ -589,7 +655,12 @@ export default function AuthPage() {
                     }}
                   />
                   <div style={{ ...styles.row, marginTop: 10 }}>
-                    <button type="button" onClick={doResetRequest} disabled={loading} style={{ ...styles.btn, opacity: loading ? 0.6 : 1 }}>
+                    <button
+                      type="button"
+                      onClick={doResetRequest}
+                      disabled={loading}
+                      style={{ ...styles.btn, opacity: loading ? 0.6 : 1 }}
+                    >
                       코드 재전송
                     </button>
                     <button
@@ -614,25 +685,30 @@ export default function AuthPage() {
                     <div style={styles.label}>새 비밀번호</div>
                     <input
                       value={newPw}
-                      onChange={(e) => setNewPw(e.target.value)}
+                      onChange={onPwChange(setNewPw)}
+                      onPaste={onPwPaste(setNewPw)}
+                      onKeyDown={blockSpaceKey}
                       placeholder="6자 이상"
                       type="password"
                       autoComplete="new-password"
                       style={styles.input}
                     />
+                    <div style={{ ...styles.hint, marginTop: 8 }}>* 비밀번호에는 공백을 사용할 수 없습니다.</div>
                   </div>
                   <div>
                     <div style={styles.label}>새 비밀번호 확인</div>
                     <input
                       value={newPw2}
-                      onChange={(e) => setNewPw2(e.target.value)}
+                      onChange={onPwChange(setNewPw2)}
+                      onPaste={onPwPaste(setNewPw2)}
+                      onKeyDown={(e) => {
+                        blockSpaceKey(e);
+                        if (e.key === "Enter") doResetSet();
+                      }}
                       placeholder="한 번 더 입력"
                       type="password"
                       autoComplete="new-password"
                       style={styles.input}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") doResetSet();
-                      }}
                     />
                   </div>
 
@@ -670,7 +746,11 @@ export default function AuthPage() {
               </button>
 
               <div style={styles.hint}>
-                {mode === "signup" ? "가입 후 메일 Token으로 인증이 필요합니다." : mode === "verify" ? "메일함에서 Token을 확인하세요." : "계정은 이메일로 관리됩니다."}
+                {mode === "signup"
+                  ? "가입 후 메일 Token으로 인증이 필요합니다."
+                  : mode === "verify"
+                    ? "메일함에서 Token을 확인하세요."
+                    : "계정은 이메일로 관리됩니다."}
               </div>
             </div>
           ) : (

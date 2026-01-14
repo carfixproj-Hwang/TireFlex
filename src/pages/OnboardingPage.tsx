@@ -1,22 +1,61 @@
-import { useEffect, useRef, useState } from "react";
+// src/pages/OnboardingPage.tsx
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form"; // ✅ 여기 오타 수정: react-hookform ❌ -> react-hook-form ✅
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import "../styles/premiumForms.css";
 
-const phoneRegex = /^01[0-9]-\d{3,4}-\d{4}$/;
+function onlyDigits(v: string) {
+  return (v ?? "").replace(/\D+/g, "");
+}
+
+function formatPhoneKR(digits: string) {
+  const d = onlyDigits(digits).slice(0, 11);
+
+  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+
+  if (d.length <= 3) return d;
+  if (d.length <= 7) return `${d.slice(0, 3)}-${d.slice(3)}`;
+  return `${d.slice(0, 3)}-${d.slice(3, d.length - 4)}-${d.slice(d.length - 4)}`;
+}
+
+function sanitizeName(v: string) {
+  // 한글/영문/공백만 허용, 공백 1칸으로 정리, 앞뒤 공백 제거
+  const kept = (v ?? "").replace(/[^A-Za-z가-힣 ]+/g, "");
+  return kept.replace(/\s+/g, " ").trim();
+}
+
+function sanitizeDigits(v: string) {
+  return onlyDigits(v).slice(0, 11);
+}
+
+const nameRegex = /^[A-Za-z가-힣]+(?: [A-Za-z가-힣]+)*$/;
+const phoneDigitsRegex = /^01\d{8,9}$/;
 
 const schema = z.object({
-  full_name: z.string().min(2, "실명은 2자 이상 입력해주세요."),
-  phone: z.string().regex(phoneRegex, "휴대폰 번호 형식: 010-0000-0000"),
+  full_name: z.preprocess(
+    (v) => sanitizeName(String(v ?? "")),
+    z
+      .string()
+      .min(2, "실명은 2자 이상 입력해주세요.")
+      .regex(nameRegex, "이름은 한글 또는 영어만 가능합니다. (특수문자/숫자 불가)")
+  ),
+
+  phone: z.preprocess(
+    (v) => sanitizeDigits(String(v ?? "")),
+    z.string().regex(phoneDigitsRegex, "휴대폰 번호는 숫자만 입력하세요. (예: 01012345678)")
+  ),
+
   car_model: z.string().min(1, "차종을 입력해주세요. (예: K5, 아반떼, 카마로SS 등)"),
   problem: z.string().min(1, "문제(증상)를 입력해주세요."),
   insurance: z.boolean(),
 });
 
-type FormValues = z.infer<typeof schema>;
+type FormInput = z.input<typeof schema>;
+type FormValues = z.output<typeof schema>;
 
 type ProfileRow = {
   id: string;
@@ -53,6 +92,9 @@ export default function OnboardingPage() {
   const [toastClosing, setToastClosing] = useState(false);
   const toastTimerRef = useRef<number | null>(null);
 
+  // ✅ IME(한글 입력) 조합중 여부
+  const [nameComposing, setNameComposing] = useState(false);
+
   const showToast = (t: ToastState) => {
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
     setToastClosing(false);
@@ -71,20 +113,26 @@ export default function OnboardingPage() {
   }, []);
 
   const {
+    control,
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
+  } = useForm<FormInput, any, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       full_name: "",
-      phone: "010-",
+      phone: "010",
       car_model: "",
       problem: "",
       insurance: false,
     },
   });
+
+  const phoneRaw = watch("phone");
+  const phoneDigits = typeof phoneRaw === "string" ? phoneRaw : String(phoneRaw ?? "");
+  const phonePretty = useMemo(() => formatPhoneKR(phoneDigits), [phoneDigits]);
 
   useEffect(() => {
     let mounted = true;
@@ -108,9 +156,7 @@ export default function OnboardingPage() {
       }
 
       if (!user.email_confirmed_at) {
-        if (mounted) {
-          setMsg("이메일 인증이 아직 완료되지 않았습니다. 받은 편지함에서 인증 후 다시 로그인해주세요.");
-        }
+        if (mounted) setMsg("이메일 인증이 아직 완료되지 않았습니다. 받은 편지함에서 인증 후 다시 로그인해주세요.");
       }
 
       const { data, error } = await supabase
@@ -126,11 +172,11 @@ export default function OnboardingPage() {
       }
 
       if (data) {
-        setValue("full_name", data.full_name ?? "");
-        setValue("phone", data.phone ?? "010-");
-        setValue("car_model", data.car_model ?? "");
-        setValue("problem", data.default_problem ?? "");
-        setValue("insurance", Boolean(data.insurance));
+        setValue("full_name", sanitizeName(data.full_name ?? ""), { shouldValidate: false });
+        setValue("phone", sanitizeDigits(data.phone ?? "010"), { shouldValidate: false });
+        setValue("car_model", data.car_model ?? "", { shouldValidate: false });
+        setValue("problem", data.default_problem ?? "", { shouldValidate: false });
+        setValue("insurance", Boolean(data.insurance), { shouldValidate: false });
       }
 
       if (mounted) setLoading(false);
@@ -152,14 +198,18 @@ export default function OnboardingPage() {
       return;
     }
 
+    const safeName = sanitizeName(v.full_name);
+    const safePhoneDigits = sanitizeDigits(v.phone);
+    const safePhoneFormatted = formatPhoneKR(safePhoneDigits);
+
     const payload = {
       id: user.id,
       email: user.email ?? null,
-      full_name: v.full_name,
-      phone: v.phone,
-      car_model: v.car_model,
-      default_problem: v.problem,
-      insurance: v.insurance,
+      full_name: safeName,
+      phone: safePhoneFormatted,
+      car_model: (v.car_model ?? "").trim(),
+      default_problem: (v.problem ?? "").trim(),
+      insurance: Boolean(v.insurance),
     };
 
     const { error } = await supabase.from("profiles").upsert(payload, { onConflict: "id" });
@@ -168,6 +218,9 @@ export default function OnboardingPage() {
       showToast({ kind: "err", title: "저장 실패", body: error.message });
       return;
     }
+
+    setValue("full_name", safeName, { shouldValidate: true });
+    setValue("phone", safePhoneDigits, { shouldValidate: true });
 
     showToast({ kind: "ok", title: "저장 완료", body: "프로필이 업데이트 되었습니다." });
   };
@@ -204,28 +257,76 @@ export default function OnboardingPage() {
           <div className="pCardTitle">입력/수정</div>
 
           <form onSubmit={handleSubmit(onSubmit)} style={{ display: "grid", gap: 12 }}>
-            <div className="pField" style={{ minWidth: "auto" }}>
-              <div className="pLabel">실명</div>
-              <input className={`pInput ${errClass(!!errors.full_name)}`} {...register("full_name")} placeholder="홍길동" />
-              {errors.full_name ? <div className="pErr">{errors.full_name.message}</div> : null}
-            </div>
+            {/* ✅ 실명: IME 조합중에는 sanitize 하지 않고, 조합 종료/블러 때만 sanitize */}
+            <Controller
+              name="full_name"
+              control={control}
+              render={({ field }) => {
+                const v = typeof field.value === "string" ? field.value : String(field.value ?? "");
+                return (
+                  <div className="pField" style={{ minWidth: "auto" }}>
+                    <div className="pLabel">실명</div>
+                    <input
+                      className={`pInput ${errClass(!!errors.full_name)}`}
+                      value={v}
+                      onCompositionStart={() => setNameComposing(true)}
+                      onCompositionEnd={(e) => {
+                        setNameComposing(false);
+                        const cleaned = sanitizeName(e.currentTarget.value);
+                        field.onChange(cleaned);
+                      }}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        field.onChange(nameComposing ? raw : sanitizeName(raw));
+                      }}
+                      onBlur={(e) => {
+                        const cleaned = sanitizeName(e.currentTarget.value);
+                        field.onChange(cleaned);
+                        field.onBlur();
+                      }}
+                      placeholder="홍길동 / John Doe"
+                      inputMode="text"
+                      autoComplete="name"
+                    />
+                    {errors.full_name ? <div className="pErr">{String(errors.full_name.message ?? "")}</div> : null}
+                    {!errors.full_name ? <div className="pMini">* 한글/영어만 가능 (특수문자/숫자 불가)</div> : null}
+                  </div>
+                );
+              }}
+            />
 
-            <div className="pField" style={{ minWidth: "auto" }}>
-              <div className="pLabel">휴대폰 번호</div>
-              <input className={`pInput ${errClass(!!errors.phone)}`} {...register("phone")} placeholder="010-1234-5678" />
-              {errors.phone ? <div className="pErr">{errors.phone.message}</div> : null}
-            </div>
+            {/* 번호: 숫자만 입력, 표시는 자동 하이픈 */}
+            <Controller
+              name="phone"
+              control={control}
+              render={({ field }) => (
+                <div className="pField" style={{ minWidth: "auto" }}>
+                  <div className="pLabel">휴대폰 번호</div>
+                  <input
+                    className={`pInput ${errClass(!!errors.phone)}`}
+                    value={phonePretty}
+                    onChange={(e) => field.onChange(sanitizeDigits(e.target.value))}
+                    onBlur={(e) => field.onChange(sanitizeDigits(e.currentTarget.value))}
+                    placeholder="01012345678"
+                    inputMode="numeric"
+                    autoComplete="tel"
+                  />
+                  {errors.phone ? <div className="pErr">{String(errors.phone.message ?? "")}</div> : null}
+                  {!errors.phone ? <div className="pMini">* 숫자만 입력. 저장 시 010-0000-0000 형식</div> : null}
+                </div>
+              )}
+            />
 
             <div className="pField" style={{ minWidth: "auto" }}>
               <div className="pLabel">차종</div>
               <input className={`pInput ${errClass(!!errors.car_model)}`} {...register("car_model")} placeholder="예: K5, 그랜저, 카마로SS" />
-              {errors.car_model ? <div className="pErr">{errors.car_model.message}</div> : null}
+              {errors.car_model ? <div className="pErr">{String(errors.car_model.message ?? "")}</div> : null}
             </div>
 
             <div className="pField" style={{ minWidth: "auto" }}>
               <div className="pLabel">문제(증상)</div>
               <textarea className={`pText ${errClass(!!errors.problem)}`} {...register("problem")} rows={4} placeholder="예: 엔진 경고등 점등, 변속 충격..." />
-              {errors.problem ? <div className="pErr">{errors.problem.message}</div> : null}
+              {errors.problem ? <div className="pErr">{String(errors.problem.message ?? "")}</div> : null}
             </div>
 
             <label className="pCheckRow">

@@ -79,6 +79,8 @@ type DisplayRow = MyServiceHistoryRow & {
   __group_completed_at: string | null;
 };
 
+type ViewMode = "booking" | "completed" | "all";
+
 export default function MyServiceHistoryPage() {
   const styles = useMemo(() => {
     const bg: CSSProperties = {
@@ -156,18 +158,20 @@ export default function MyServiceHistoryPage() {
     return { bg, shell, h1, glass, topbar, controlRow, label, input, btn, listWrap, card, title, mono, muted };
   }, []);
 
-  const [onlyCompleted, setOnlyCompleted] = useState(true);
+  // ✅ 기본값: 예약
+  const [viewMode, setViewMode] = useState<ViewMode>("booking");
   const [limit, setLimit] = useState(50);
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [rows, setRows] = useState<MyServiceHistoryRow[]>([]);
 
-  const displayRows = useMemo<DisplayRow[]>(() => {
+  // ✅ root_reservation_id(있으면) 기준으로 묶어서 “5일짜리 1카드”
+  const groupedRows = useMemo<DisplayRow[]>(() => {
     const groups = new Map<string, MyServiceHistoryRow[]>();
 
     for (const r of rows) {
-      const key = r.root_reservation_id ?? r.reservation_id; // ✅ root 기준으로 묶기
+      const key = (r as any).root_reservation_id ?? r.reservation_id; // 타입/런타임 둘다 안전하게
       const k = String(key);
       const arr = groups.get(k) ?? [];
       arr.push(r);
@@ -201,8 +205,7 @@ export default function MyServiceHistoryPage() {
         .map((x) => x.completed_at)
         .filter((v): v is string => !!v)
         .map((v) => new Date(v).getTime());
-      const groupCompletedAt =
-        completedCandidates.length > 0 ? new Date(Math.max(...completedCandidates)).toISOString() : null;
+      const groupCompletedAt = completedCandidates.length > 0 ? new Date(Math.max(...completedCandidates)).toISOString() : null;
 
       const rep = sorted[0];
 
@@ -222,10 +225,34 @@ export default function MyServiceHistoryPage() {
     return out;
   }, [rows]);
 
+  // ✅ 보기(전체/예약/완료) 필터는 “그룹 상태” 기준으로 적용
+  const displayRows = useMemo(() => {
+    if (viewMode === "all") return groupedRows;
+    if (viewMode === "completed") return groupedRows.filter((g) => g.__group_status === "completed");
+    // booking
+    return groupedRows.filter((g) => g.__group_status === "pending" || g.__group_status === "confirmed");
+  }, [groupedRows, viewMode]);
+
+  function durationLabel(g: DisplayRow) {
+    const cnt = g.__group_count;
+    if (cnt <= 1) return `${g.duration_minutes}분`;
+
+    // 하루 작업(540분) 분할이 누적된 형태면 “n일”로 보여주기
+    const WORKDAY = 540;
+    const total = g.__total_duration_minutes;
+    if (total >= WORKDAY * 2 && total % WORKDAY === 0) {
+      const days = total / WORKDAY;
+      return `${days}일 작업(분할 ${cnt}건)`;
+    }
+    return `총 ${total}분(분할 ${cnt}건)`;
+  }
+
   async function refresh() {
     setLoading(true);
     setErrorMsg(null);
     try {
+      // ✅ 완료 보기일 때만 서버에 completed만 요청(가벼움)
+      const onlyCompleted = viewMode === "completed";
       const list = await myListServiceHistory({ limit, onlyCompleted });
       setRows(list);
     } catch (e: any) {
@@ -239,7 +266,7 @@ export default function MyServiceHistoryPage() {
   useEffect(() => {
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onlyCompleted, limit]);
+  }, [viewMode, limit]);
 
   return (
     <div style={styles.shell}>
@@ -251,12 +278,9 @@ export default function MyServiceHistoryPage() {
           <div style={styles.controlRow}>
             <label style={{ display: "grid", gap: 6 }}>
               <span style={styles.label}>보기</span>
-              <select
-                value={onlyCompleted ? "completed" : "all"}
-                onChange={(e) => setOnlyCompleted(e.target.value === "completed")}
-                style={styles.input}
-              >
-                <option value="completed">완료만</option>
+              <select value={viewMode} onChange={(e) => setViewMode(e.target.value as ViewMode)} style={styles.input}>
+                <option value="booking">예약</option>
+                <option value="completed">완료</option>
                 <option value="all">전체</option>
               </select>
             </label>
@@ -276,9 +300,9 @@ export default function MyServiceHistoryPage() {
               </select>
             </label>
 
-            <button onClick={refresh} disabled={loading} style={{ ...styles.btn, opacity: loading ? 0.65 : 1 }}>
+            {/* <button onClick={refresh} disabled={loading} style={{ ...styles.btn, opacity: loading ? 0.65 : 1 }}>
               {loading ? "불러오는 중..." : "새로고침"}
-            </button>
+            </button> */}
           </div>
 
           <div style={badgeStyle("info")}>총 {displayRows.length}건</div>
@@ -290,52 +314,47 @@ export default function MyServiceHistoryPage() {
           {!loading && displayRows.length === 0 ? (
             <div style={styles.card}>
               <div style={styles.title}>내역이 없습니다</div>
-              <div style={styles.muted}>예약을 진행하면 여기에 정비 내역이 쌓입니다.</div>
+              <div style={styles.muted}>
+                {viewMode === "booking" ? "현재 예약 내역이 없습니다." : viewMode === "completed" ? "완료 내역이 없습니다." : "전체 내역이 없습니다."}
+              </div>
             </div>
           ) : null}
 
-          {displayRows.map((r) => {
-            const groupCount = r.__group_count;
-            const showGrouped = groupCount > 1;
+          {displayRows.map((g) => {
+            const st = g.__group_status;
+            const doneAt = g.__group_completed_at;
 
-            const st = showGrouped ? r.__group_status : r.status;
-            const doneAt = showGrouped ? r.__group_completed_at : r.completed_at;
-
-            const durLabel = showGrouped ? `총 ${r.__total_duration_minutes}분` : `${r.duration_minutes}분`;
+            const showGrouped = g.__group_count > 1;
 
             return (
-              <div key={r.__group_key} style={styles.card}>
+              <div key={g.__group_key} style={styles.card}>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                  <div style={styles.title}>{r.service_name}</div>
+                  <div style={styles.title}>{g.service_name}</div>
                   <span style={badgeStyle(statusKind(st))}>{statusLabel(st)}</span>
 
-                  {showGrouped ? <span style={badgeStyle("warn")}>분할 {groupCount}건</span> : null}
-
-                  <span style={badgeStyle("info")}>
-                    {durLabel}
-                    {typeof r.quantity === "number" ? ` · 수량 ${r.quantity}` : ""}
+                  <span style={badgeStyle(showGrouped ? "warn" : "info")}>
+                    {durationLabel(g)}
+                    {typeof g.quantity === "number" ? ` · 수량 ${g.quantity}` : ""}
                   </span>
                 </div>
 
                 <div style={styles.mono}>
                   {showGrouped ? (
                     <>
-                      작업기간: {fmtKST(r.__range_start_iso)} ~ {fmtKST(r.__range_end_iso)}
+                      작업기간: {fmtKST(g.__range_start_iso)} ~ {fmtKST(g.__range_end_iso)}
                       {doneAt ? ` · 완료: ${fmtKST(doneAt)}` : ""}
                     </>
                   ) : (
                     <>
-                      예약시간: {fmtKST(r.scheduled_at)}
+                      예약시간: {fmtKST(g.scheduled_at)}
                       {doneAt ? ` · 완료: ${fmtKST(doneAt)}` : ""}
                     </>
                   )}
                 </div>
 
-                <div style={styles.muted}>
-                  증상: {r.problem ?? "-"} · 보험: {r.insurance ? "적용" : "미적용"}
-                </div>
+                <div style={styles.muted}>증상: {g.problem ?? "-"} · 보험: {g.insurance ? "적용" : "미적용"}</div>
 
-                {r.admin_note ? <div style={styles.muted}>관리자 메모: {r.admin_note}</div> : null}
+                {g.admin_note ? <div style={styles.muted}>관리자 메모: {g.admin_note}</div> : null}
               </div>
             );
           })}

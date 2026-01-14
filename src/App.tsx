@@ -16,7 +16,6 @@ import AdminServicesPage from "./pages/admin/AdminServicesPage";
 import AdminOpsPage from "./pages/admin/AdminOpsPage";
 import AdminCalendarPage from "./pages/AdminCalendarPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
-// import AdminStaffPage from "./pages/admin/AdminStaffPage";
 import OwnerStaffPage from "./pages/admin/OwnerStaffPage";
 
 import OwnerServiceHistoryPage from "./pages/owner/OwnerServiceHistoryPage";
@@ -96,7 +95,34 @@ function AppLayout({
         <Outlet />
       </main>
 
-      <footer className="appFooter">...</footer>
+      <footer className="appFooter">
+        <div className="appFooterInner">
+          <div className="appFooterBlock">
+            <strong>타이어FLEX</strong><br />
+            <span>대표자 : 이정준</span><br />
+            <span>사업자등록번호 : 775-53-00721</span>
+          </div>
+
+          <div className="appFooterBlock">
+            <strong>Contact</strong><br />
+            <span>전화 : 031-352-0114</span><br />
+            <span>휴대폰 : 010-6677-8298</span>
+          </div>
+
+          <div className="appFooterBlock">
+            <strong>Location</strong><br />
+            <span>경기도 화성시 남양읍 화성로 1255</span><br />
+            <span>
+              1255, Hwaseong-ro, Namyang-eup, Hwaseong-si, Gyeonggi-do, Republic of
+              Korea
+            </span>
+          </div>
+        </div>
+
+        <div className="appFooterCopy">
+          © {new Date().getFullYear()} TireFLEX. All rights reserved.
+        </div>
+      </footer>
     </div>
   );
 }
@@ -281,15 +307,6 @@ function AppInner() {
           }
         />
 
-        {/* <Route
-          path="/admin/staff"
-          element={
-            <ProtectedRoute isAllowed={isAuthed && isOwner} redirectTo="/">
-              <AdminStaffPage />
-            </ProtectedRoute>
-          }
-        /> */}
-
         <Route
           path="/owner/staff"
           element={
@@ -299,7 +316,6 @@ function AppInner() {
           }
         />
 
-        {/* ✅ 오너 전용: 전체 정비내역 / 견적서 관리 */}
         <Route
           path="/owner/history"
           element={

@@ -1,6 +1,6 @@
 // src/pages/BookPage.tsx
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   createReservation,
   getAvailableSlots,
@@ -63,6 +63,7 @@ function formatDuration(it: ServiceItem | null): string {
 }
 
 export default function BookPage() {
+  const nav = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedItemId = searchParams.get("service_item_id") ?? "";
 
@@ -206,11 +207,8 @@ export default function BookPage() {
 
       setMsg(`예약 생성 완료 ✅ (id: ${id})`);
 
-      if (!isWorkdays) {
-        const list = await getAvailableSlots(dateStr, itemId, safeQty);
-        setSlots(list);
-        setSelected(list[0] ?? "");
-      }
+      // ✅ 예약 생성 후 → 내 정비 내역으로 이동
+      nav("/my/history", { replace: true });
     } catch (e: any) {
       setMsg(`예약 실패: ${e.message ?? String(e)}`);
     }
@@ -316,9 +314,7 @@ export default function BookPage() {
                   {fmtTime(s)}
                 </button>
               ))}
-              {!loading && slots.length === 0 ? (
-                <div className="bookEmpty">가능한 시간이 없습니다.</div>
-              ) : null}
+              {!loading && slots.length === 0 ? <div className="bookEmpty">가능한 시간이 없습니다.</div> : null}
             </div>
           )}
         </section>

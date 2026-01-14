@@ -1,0 +1,60 @@
+/* src/styles/homeInfoCardsUX.css */
+
+/* 정보 카드: "클릭 가능한 카드"처럼 보이는 효과 제거 */
+.opsSummary .opsBox.infoCard {
+  cursor: default !important;
+  user-select: text;
+  -webkit-tap-highlight-color: transparent;
+  transform: none !important;
+}
+
+/* 혹시 기존 CSS에 hover/active가 있으면 강제 무력화 */
+.opsSummary .opsBox.infoCard:hover,
+.opsSummary .opsBox.infoCard:active,
+.opsSummary .opsBox.infoCard:focus,
+.opsSummary .opsBox.infoCard:focus-within {
+  transform: none !important;
+  filter: none !important;
+}
+
+/* 카드 내부도 기본 커서 유지 */
+.opsSummary .opsBox.infoCard *,
+.opsSummary .opsBox.infoCard .blockRow,
+.opsSummary .opsBox.infoCard .blockRow * {
+  cursor: inherit;
+}
+
+/* 리스트 행이 버튼처럼 보이지 않도록 */
+.opsSummary .opsBox.infoCard .blockRow {
+  transition: none !important;
+}
+
+/* 아래 액션 영역 (여기만 클릭 유도) */
+.homeInfoFooter {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+}
+
+.homeInfoHint {
+  font-size: 12px;
+  opacity: 0.82;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.homeInfoActions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* small 버튼이 없다면 대비용 */
+.btnGhost.small {
+  padding: 10px 12px;
+  border-radius: 14px;
+}
