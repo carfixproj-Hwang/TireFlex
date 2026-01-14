@@ -1,3 +1,4 @@
+// src/pages/admin/AdminSchedulePage.tsx
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
@@ -68,20 +69,29 @@ function kstDateStringFromIso(iso: string) {
   return `${y}-${m}-${day}`;
 }
 
-function computeDayBasedWindow(scheduledAtIso: string, durationMinutes: number) {
-  const base = kstDateStringFromIso(scheduledAtIso);
-  const days = durationMinutes / 1440;
+function normalizeHHmm(v: unknown, fallback: string) {
+  if (v == null) return fallback;
+  const s = String(v).trim();
+  const m = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (!m) return fallback;
+  const hh = clampInt(Number(m[1]), 0, 23);
+  const mm = clampInt(Number(m[2]), 0, 59);
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
 
-  const start = isoAtKst(base, "09:00");
+function hhmmToMinutes(hhmm: string) {
+  const m = hhmm.match(/^(\d{2}):(\d{2})$/);
+  if (!m) return 0;
+  const hh = clampInt(Number(m[1]), 0, 23);
+  const mm = clampInt(Number(m[2]), 0, 59);
+  return hh * 60 + mm;
+}
 
-  const endDate = new Date(`${base}T00:00:00+09:00`);
-  endDate.setDate(endDate.getDate() + days);
-  const endY = endDate.getFullYear();
-  const endM = String(endDate.getMonth() + 1).padStart(2, "0");
-  const endD = String(endDate.getDate()).padStart(2, "0");
-  const end = isoAtKst(`${endY}-${endM}-${endD}`, "18:00");
-
-  return { start, end, base, days };
+function minutesToHHmm(totalMinutes: number) {
+  const t = clampInt(totalMinutes, 0, 24 * 60 - 1);
+  const hh = Math.floor(t / 60);
+  const mm = t % 60;
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
 const STATUS_LABEL: Record<ReservationStatus, string> = {
@@ -91,8 +101,6 @@ const STATUS_LABEL: Record<ReservationStatus, string> = {
   canceled: "취소",
   no_show: "노쇼",
 };
-
-const WORKDAY_MINUTES = 540;
 
 type SlotRow = {
   startIso: string; // KST ISO(+09)
@@ -361,6 +369,13 @@ export default function AdminSchedulePage() {
   const [dragResId, setDragResId] = useState<string | null>(null);
   const [dragOverSlotStart, setDragOverSlotStart] = useState<string | null>(null);
 
+  // ✅ ops_settings 기반 운영시간/슬롯
+  const [openHHmm, setOpenHHmm] = useState<string>("09:00");
+  const [closeHHmm, setCloseHHmm] = useState<string>("18:00");
+  const [slotMinutes, setSlotMinutes] = useState<number>(30);
+  const [tz, setTz] = useState<string>("Asia/Seoul");
+  const [capacity, setCapacity] = useState<number>(1);
+
   // ✅ 리프트(동시작업) 용량
   const [liftCap, setLiftCap] = useState<number>(1);
   const [liftDraft, setLiftDraft] = useState<number>(1);
@@ -451,13 +466,45 @@ export default function AdminSchedulePage() {
 
   const isCapacityConsumer = (status: ReservationStatus) => status !== "canceled" && status !== "no_show";
 
+  const workdayMinutes = useMemo(() => {
+    const o = hhmmToMinutes(openHHmm);
+    const c = hhmmToMinutes(closeHHmm);
+    const diff = c - o;
+    return diff > 0 ? diff : 540;
+  }, [openHHmm, closeHHmm]);
+
+  function computeDayBasedWindow(scheduledAtIso: string, durationMinutes: number) {
+    const base = kstDateStringFromIso(scheduledAtIso);
+    const days = durationMinutes / 1440;
+
+    const start = isoAtKst(base, openHHmm);
+
+    const endDate = new Date(`${base}T00:00:00+09:00`);
+    endDate.setDate(endDate.getDate() + days);
+    const endY = endDate.getFullYear();
+    const endM = String(endDate.getMonth() + 1).padStart(2, "0");
+    const endD = String(endDate.getDate()).padStart(2, "0");
+    const end = isoAtKst(`${endY}-${endM}-${endD}`, closeHHmm);
+
+    return { start, end, base, days };
+  }
+
+  const safeSlotMinutes = useMemo(() => clampInt(Number(slotMinutes || 30), 5, 240), [slotMinutes]);
+
   const slots = useMemo(() => {
     const rows: SlotRow[] = [];
-    for (let i = 0; i < 18; i++) {
-      const hh = 9 + Math.floor(i / 2);
-      const mm = i % 2 === 0 ? "00" : "30";
-      const startIso = isoAtKst(dateStr, `${String(hh).padStart(2, "0")}:${mm}`);
-      const endIso = addMinutesIso(startIso, 30);
+
+    const openMin = hhmmToMinutes(openHHmm);
+    const closeMin = hhmmToMinutes(closeHHmm);
+
+    if (closeMin <= openMin) return rows;
+
+    for (let t = openMin; t + safeSlotMinutes <= closeMin; t += safeSlotMinutes) {
+      const hhmm = minutesToHHmm(t);
+      const endHhmm = minutesToHHmm(t + safeSlotMinutes);
+
+      const startIso = isoAtKst(dateStr, hhmm);
+      const endIso = isoAtKst(dateStr, endHhmm);
 
       const b = blocked.find((bt) => overlaps(bt.start_at, bt.end_at, startIso, endIso)) ?? null;
 
@@ -472,8 +519,9 @@ export default function AdminSchedulePage() {
 
       rows.push({ startIso, endIso, blocked: b, reservations: rs });
     }
+
     return rows;
-  }, [dateStr, visibleReservations, blocked]);
+  }, [dateStr, visibleReservations, blocked, openHHmm, closeHHmm, safeSlotMinutes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function refresh() {
     setLoading(true);
@@ -482,19 +530,36 @@ export default function AdminSchedulePage() {
       const [r, b, o] = await Promise.all([
         adminListReservationsByDate(dateStr),
         adminListBlockedTimesByDate(dateStr),
-        supabase.from("ops_settings").select("max_batch_qty").eq("id", 1).maybeSingle(),
+        supabase.from("ops_settings").select("max_batch_qty,open_time,close_time,slot_minutes,capacity,tz").eq("id", 1).maybeSingle(),
       ]);
 
       setReservations(r);
       setBlocked(b);
 
       if (!o.error) {
-        const cap = clampInt(Number(o.data?.max_batch_qty ?? 1), 1, 20);
-        setLiftCap(cap);
-        setLiftDraft(cap);
+        const capLift = clampInt(Number((o.data as any)?.max_batch_qty ?? 1), 1, 20);
+        setLiftCap(capLift);
+        setLiftDraft(capLift);
+
+        setOpenHHmm(normalizeHHmm((o.data as any)?.open_time, "09:00"));
+        setCloseHHmm(normalizeHHmm((o.data as any)?.close_time, "18:00"));
+
+        const sm = (o.data as any)?.slot_minutes;
+        setSlotMinutes(clampInt(Number(sm ?? 30), 5, 240));
+
+        const cap = (o.data as any)?.capacity;
+        setCapacity(clampInt(Number(cap ?? 1), 1, 50));
+
+        const tzVal = (o.data as any)?.tz;
+        setTz(tzVal ? String(tzVal) : "Asia/Seoul");
       } else {
         setLiftCap(1);
         setLiftDraft(1);
+        setOpenHHmm("09:00");
+        setCloseHHmm("18:00");
+        setSlotMinutes(30);
+        setCapacity(1);
+        setTz("Asia/Seoul");
       }
 
       const sp = new URLSearchParams(location.search);
@@ -541,7 +606,7 @@ export default function AdminSchedulePage() {
       return {
         start: w.start,
         end: w.end,
-        label: `${w.base} 09:00 ~ ${kstDateStringFromIso(w.end)} 18:00 (${w.days}일)`,
+        label: `${w.base} ${openHHmm} ~ ${kstDateStringFromIso(w.end)} ${closeHHmm} (${w.days}일)`,
       };
     }
 
@@ -551,14 +616,14 @@ export default function AdminSchedulePage() {
       end,
       label: `${fmtTimeKst(activeRes.scheduled_at)} ~ ${fmtTimeKst(end)} (${activeRes.duration_minutes}분)`,
     };
-  }, [activeRes]);
+  }, [activeRes, openHHmm, closeHHmm]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function mustStartAt0900For(r: AdminReservationRow) {
-    return r.duration_minutes === WORKDAY_MINUTES;
+  function mustStartAtOpenFor(r: AdminReservationRow) {
+    return r.duration_minutes === workdayMinutes;
   }
 
-  function is0900Slot(startIso: string) {
-    return startIso.includes("T09:00:00+09:00");
+  function isOpenSlot(startIso: string) {
+    return startIso.includes(`T${openHHmm}:00+09:00`);
   }
 
   function computeCandidateEnd(r: AdminReservationRow, candStart: string) {
@@ -569,7 +634,7 @@ export default function AdminSchedulePage() {
     return blocked.some((bt) => overlaps(bt.start_at, bt.end_at, candStart, candEnd));
   }
 
-  // ✅ 리프트 용량 기반 (정확): 30분 슬라이스별 "동시 겹침 최대값"으로 판단
+  // ✅ 리프트 용량 기반: 슬롯 단위로 "동시 겹침 최대값"으로 판단
   function isActiveStatus(s: ReservationStatus) {
     return s !== "canceled" && s !== "no_show";
   }
@@ -583,7 +648,7 @@ export default function AdminSchedulePage() {
   }
 
   function maxOtherOverlapsInWindow(resId: string, candStart: string, candEnd: string) {
-    const stepMs = 30 * 60 * 1000;
+    const stepMs = safeSlotMinutes * 60 * 1000;
     const s0 = new Date(candStart).getTime();
     const e0 = new Date(candEnd).getTime();
     let max = 0;
@@ -607,11 +672,11 @@ export default function AdminSchedulePage() {
   }
 
   function isWithinBusinessHours(candStart: string, candEnd: string) {
-    const open = isoAtKst(dateStr, "09:00");
-    const close = isoAtKst(dateStr, "18:00");
+    const openIso = isoAtKst(dateStr, openHHmm);
+    const closeIso = isoAtKst(dateStr, closeHHmm);
     const s = new Date(candStart).getTime();
     const e = new Date(candEnd).getTime();
-    return s >= new Date(open).getTime() && e <= new Date(close).getTime();
+    return s >= new Date(openIso).getTime() && e <= new Date(closeIso).getTime();
   }
 
   async function rescheduleReservation(resId: string, newStart: string) {
@@ -643,8 +708,8 @@ export default function AdminSchedulePage() {
       return;
     }
 
-    if (mustStartAt0900For(r) && !is0900Slot(slotStartIso)) {
-      setMsg("영업일 작업(일 단위)은 09:00 슬롯으로만 이동할 수 있습니다.");
+    if (mustStartAtOpenFor(r) && !isOpenSlot(slotStartIso)) {
+      setMsg(`영업일 작업(일 단위)은 ${openHHmm} 슬롯으로만 이동할 수 있습니다.`);
       return;
     }
 
@@ -652,7 +717,7 @@ export default function AdminSchedulePage() {
     const candEnd = computeCandidateEnd(r, candStart);
 
     if (!isWithinBusinessHours(candStart, candEnd)) {
-      setMsg("영업시간(09:00~18:00) 범위를 벗어납니다.");
+      setMsg(`영업시간(${openHHmm}~${closeHHmm}) 범위를 벗어납니다.`);
       return;
     }
 
@@ -661,7 +726,6 @@ export default function AdminSchedulePage() {
       return;
     }
 
-    // ✅ 핵심: '전체 겹침 카운트'가 아니라, 30분 슬라이스별 최대 동시겹침으로 용량 체크
     const cap = clampInt(Number(liftCap), 1, 20);
     const maxOther = maxOtherOverlapsInWindow(resId, candStart, candEnd);
     if (maxOther >= cap) {
@@ -740,7 +804,6 @@ export default function AdminSchedulePage() {
               내 배정만 보기
             </label>
 
-            {/* ✅ 운영설정: 리프트 개수 */}
             <div style={{ display: "grid", gap: 6 }}>
               <div style={styles.label}>리프트(동시작업)</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -770,6 +833,11 @@ export default function AdminSchedulePage() {
           </div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end" }}>
+            <span style={chipStyle("info")}>
+              운영 {openHHmm}~{closeHHmm} · {safeSlotMinutes}분
+            </span>
+            <span style={chipStyle("info")}>TZ {tz || "Asia/Seoul"}</span>
+            <span style={chipStyle("info")}>수용 {Math.max(1, capacity)}대</span>
             <span style={chipStyle("info")}>리프트 {Math.max(1, liftCap)}대</span>
             <span style={chipStyle("info")}>총 {stats.total}건</span>
             <span style={chipStyle("ok")}>완료 {stats.done}</span>
@@ -780,7 +848,7 @@ export default function AdminSchedulePage() {
         </div>
 
         <div style={styles.gridHead}>
-          09:00 ~ 18:00 (30분 그리드) · 동시작업(리프트) {Math.max(1, liftCap)}건 · 팁: 예약 버튼을 드래그 → 다른 시간칸에 드롭
+          {openHHmm} ~ {closeHHmm} ({safeSlotMinutes}분 그리드) · 동시작업(리프트) {Math.max(1, liftCap)}건 · 팁: 예약 버튼을 드래그 → 다른 시간칸에 드롭
         </div>
 
         {slots.map((s) => {
@@ -797,7 +865,6 @@ export default function AdminSchedulePage() {
 
           const rowOutline = isDragOver ? "2px solid rgba(255,255,255,0.85)" : "1px solid transparent";
 
-          // 슬롯 단위 점유(취소/노쇼 제외)
           const cap = Math.max(1, liftCap);
           const occ = s.reservations.filter((r) => isCapacityConsumer(r.status)).length;
           const capChipKind = occ >= cap ? "danger" : occ > 0 ? "warn" : "info";
@@ -914,7 +981,6 @@ export default function AdminSchedulePage() {
 
       {msg ? <div style={styles.msgBar}>{msg}</div> : null}
 
-      {/* 예약 관리: 깔끔한 모달 */}
       {activeResId ? (
         <div
           className="asrBackdrop"
