@@ -5,6 +5,7 @@ import { supabase } from "./lib/supabaseClient";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Navbar from "./components/Navbar";
+import RestoreLastRouteOnReload from "./components/RestoreLastRouteOnReload";
 
 import HomePage from "./pages/HomePage";
 import AuthPage from "./pages/AuthPage";
@@ -32,6 +33,7 @@ type AppRole = "owner" | "staff" | "member";
 
 type SessionState = {
   loading: boolean;
+  roleLoading: boolean; // ✅ 추가
   userId: string | null;
   role: AppRole;
   isAdmin: boolean;
@@ -133,6 +135,7 @@ function AppLayout({
 function AppInner() {
   const [session, setSession] = useState<SessionState>({
     loading: true,
+    roleLoading: false, // ✅ 추가
     userId: null,
     role: "member",
     isAdmin: false,
@@ -157,6 +160,7 @@ function AppInner() {
               ...prev,
               role,
               isAdmin: role === "owner" || role === "staff",
+              roleLoading: false, // ✅ role 확정
             }
       );
     };
@@ -169,6 +173,7 @@ function AppInner() {
         if (error) {
           setSession({
             loading: false,
+            roleLoading: false,
             userId: null,
             role: "member",
             isAdmin: false,
@@ -181,6 +186,7 @@ function AppInner() {
 
         setSession({
           loading: false,
+          roleLoading: !!uid, // ✅ 로그인 상태면 role 로딩 시작
           userId: uid,
           role: "member",
           isAdmin: false,
@@ -192,6 +198,7 @@ function AppInner() {
         if (!mounted) return;
         setSession({
           loading: false,
+          roleLoading: false,
           userId: null,
           role: "member",
           isAdmin: false,
@@ -207,6 +214,7 @@ function AppInner() {
 
       setSession({
         loading: false,
+        roleLoading: !!uid, // ✅ 로그인 상태면 role 로딩 시작
         userId: uid,
         role: "member",
         isAdmin: false,
@@ -227,7 +235,8 @@ function AppInner() {
   const isOwner = session.role === "owner";
   const isStaffOrOwner = session.role === "staff" || session.role === "owner";
 
-  if (session.loading) {
+  // ✅ roleLoading 중에는 라우트 판단(redirect) 자체를 막아서 F5해도 현재 URL 유지
+  if (session.loading || session.roleLoading) {
     return (
       <div className="appBoot">
         <div className="appBootCard">
@@ -346,6 +355,7 @@ function AppInner() {
 export default function App() {
   return (
     <BrowserRouter>
+      <RestoreLastRouteOnReload />
       <AppInner />
     </BrowserRouter>
   );

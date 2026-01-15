@@ -9,6 +9,11 @@ import {
 } from "../../lib/adminReservations";
 import { useNavigate } from "react-router-dom";
 import "../../styles/ownerHistoryPremium.css";
+import {
+  ownerListServiceEstimatesByIssuedRange,
+  ownerUpsertServiceEstimate,
+  type ServiceEstimateRow,
+} from "../../lib/ownerEstimates";
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -50,6 +55,15 @@ function money(n: number) {
   return n.toLocaleString("ko-KR");
 }
 
+function escapeHtml(s: string) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 // ✅ 오너 화면 표시용: “작업 단위”로 묶인 행
 type OwnerWorkRow = AdminReservationRow & {
   work_id: string;
@@ -60,7 +74,6 @@ type OwnerWorkRow = AdminReservationRow & {
 };
 
 function chooseWorkStatus(list: AdminReservationRow[]): ReservationStatus {
-  // 완료가 하나라도 있으면 완료, 아니면 확정/대기 우선, 그 외 노쇼/취소
   const st = new Set(list.map((x) => x.status));
   if (st.has("completed")) return "completed";
   if (st.has("confirmed")) return "confirmed";
@@ -90,14 +103,14 @@ function groupToWorks(rows: AdminReservationRow[]): OwnerWorkRow[] {
     const work_start_at = first.scheduled_at;
     const work_end_at = last.scheduled_at;
 
-    const serviceNames = Array.from(
-      new Set(sorted.map((x) => String(x.service_name ?? "")).filter((s) => s.trim().length > 0))
-    );
+    const serviceNames = Array.from(new Set(sorted.map((x) => String(x.service_name ?? "")).filter((s) => s.trim().length > 0)));
 
     const service_name =
       serviceNames.length <= 1 ? (serviceNames[0] ?? first.service_name ?? "정비") : `${serviceNames[0]} 외 ${serviceNames.length - 1}`;
 
-    const lastAssigned = [...sorted].reverse().find((x) => (x.assigned_admin_id ?? "").length > 0 || (x.assigned_admin_label ?? "").length > 0);
+    const lastAssigned = [...sorted]
+      .reverse()
+      .find((x) => (x.assigned_admin_id ?? "").length > 0 || (x.assigned_admin_label ?? "").length > 0);
     const maxCompleted = [...sorted]
       .filter((x) => x.completed_at)
       .sort((a, b) => new Date(String(a.completed_at)).getTime() - new Date(String(b.completed_at)).getTime())
@@ -114,11 +127,9 @@ function groupToWorks(rows: AdminReservationRow[]): OwnerWorkRow[] {
     const workRow: OwnerWorkRow = {
       ...first,
 
-      // ✅ 대표키는 “작업ID(루트)”로 고정
       reservation_id: workId,
       root_reservation_id: workId,
 
-      // ✅ 대표 일시는 마지막 일정(최근 기준으로 정렬/표시)
       scheduled_at: work_end_at,
 
       status: chooseWorkStatus(sorted),
@@ -143,7 +154,6 @@ function groupToWorks(rows: AdminReservationRow[]): OwnerWorkRow[] {
     works.push(workRow);
   }
 
-  // 최근 작업이 위로
   works.sort((a, b) => new Date(b.work_end_at).getTime() - new Date(a.work_end_at).getTime());
   return works;
 }
@@ -155,6 +165,195 @@ function workRangeLabel(r: OwnerWorkRow) {
   const same = kstDateStr(a) === kstDateStr(b);
   if (same) return toKstFull(a);
   return `${toKstFull(a)} ~ ${toKstFull(b)}`;
+}
+
+function createUuid() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const c: any = (globalThis as any).crypto;
+    if (c?.randomUUID) return c.randomUUID();
+  } catch {}
+  return `est_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function buildEstimateHtml(input: {
+  estimateNo?: string;
+  issueAtIso: string;
+  snapshot: any;
+  items: EstimateItem[];
+  memo?: string | null;
+  totalAmount: number;
+  workRangeText?: string;
+  statusText?: string;
+}) {
+  const shopName = "TIRE FLEX";
+  const shopTel = "031-355-0018";
+  const issueDate = ymd(new Date(input.issueAtIso));
+  const snap = input.snapshot ?? {};
+
+  const itemsHtml = (input.items ?? [])
+    .map((it) => {
+      const qty = Number(it.qty) || 0;
+      const unit = Number(it.unitPrice) || 0;
+      const line = qty * unit;
+      return `
+          <tr>
+            <td>${escapeHtml(it.name ?? "")}</td>
+            <td style="text-align:right;">${escapeHtml(money(qty))}</td>
+            <td style="text-align:right;">${escapeHtml(money(unit))}</td>
+            <td style="text-align:right;"><b>${escapeHtml(money(line))}</b></td>
+          </tr>
+        `;
+    })
+    .join("");
+
+  return `
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>견적서</title>
+  <style>
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;}
+    @page { size: A4; margin: 12mm; }
+    body{margin:24px;color:#0b0f18;}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;}
+    .brand{font-weight:900;font-size:22px;letter-spacing:-0.4px;}
+    .sub{opacity:0.8;margin-top:6px;}
+    .card{margin-top:18px;border:1px solid #e6e8ee;border-radius:12px;padding:14px;}
+    .row{display:flex;gap:14px;flex-wrap:wrap;}
+    .col{flex:1;min-width:240px;}
+    .label{font-size:12px;opacity:0.7;}
+    .val{margin-top:6px;font-weight:800;}
+    table{width:100%;border-collapse:collapse;margin-top:12px;}
+    th,td{border-bottom:1px solid #eef0f5;padding:10px 8px;font-size:13px;}
+    th{text-align:left;background:#f7f8fb;}
+    .total{display:flex;justify-content:flex-end;margin-top:10px;font-size:16px;}
+    .total b{font-size:20px;margin-left:12px;}
+    .memo{margin-top:12px;white-space:pre-wrap;font-size:13px;opacity:0.85;}
+    .metaGrid{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid #e6e8ee;background:#fafbff;font-size:12px;font-weight:800;}
+    @media print{
+      body{margin:0;}
+      .card{border:none;padding:0;}
+    }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div>
+      <div class="brand">${escapeHtml(shopName)} 견적서</div>
+      <div class="sub">Tel: ${escapeHtml(shopTel)}</div>
+      <div class="metaGrid">
+        <span class="pill">발행일: ${escapeHtml(issueDate)}</span>
+        ${input.estimateNo ? `<span class="pill">견적번호: ${escapeHtml(input.estimateNo)}</span>` : ""}
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div class="label">작업 ID</div>
+      <div class="val">${escapeHtml(String(snap.reservation_id ?? "-"))}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <div class="label">고객명</div>
+        <div class="val">${escapeHtml(String(snap.full_name ?? "-"))}</div>
+      </div>
+      <div class="col">
+        <div class="label">연락처</div>
+        <div class="val">${escapeHtml(String(snap.phone ?? "-"))}</div>
+      </div>
+      <div class="col">
+        <div class="label">차량</div>
+        <div class="val">${escapeHtml(String(snap.car_model ?? "-"))}</div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div class="col">
+        <div class="label">작업일정</div>
+        <div class="val">${escapeHtml(String(input.workRangeText ?? (snap.scheduled_at ? toKstFull(String(snap.scheduled_at)) : "-")))}</div>
+      </div>
+      <div class="col">
+        <div class="label">서비스</div>
+        <div class="val">${escapeHtml(String(snap.service_name ?? "-"))}</div>
+      </div>
+      <div class="col">
+        <div class="label">상태</div>
+        <div class="val">${escapeHtml(String(input.statusText ?? "-"))}</div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <div class="col">
+        <div class="label">담당자</div>
+        <div class="val">${escapeHtml(String(snap.assigned_admin_label ?? "미배정"))}</div>
+      </div>
+      <div class="col">
+        <div class="label">합계</div>
+        <div class="val">${escapeHtml(money(input.totalAmount))}원</div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>항목</th>
+          <th style="text-align:right;">수량</th>
+          <th style="text-align:right;">단가</th>
+          <th style="text-align:right;">금액</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml}
+      </tbody>
+    </table>
+
+    <div class="total">
+      합계 <b>${escapeHtml(money(input.totalAmount))}원</b>
+    </div>
+
+    ${
+      (input.memo ?? "").trim()
+        ? `<div class="memo"><div class="label">메모</div>${escapeHtml(String(input.memo))}</div>`
+        : ""
+    }
+  </div>
+</body>
+</html>
+  `.trim();
+}
+
+function writeAndPrint(w: Window, html: string) {
+  try {
+    (w as any).opener = null;
+  } catch {}
+
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+
+  const doPrint = () => {
+    try {
+      w.focus();
+      w.print();
+    } catch {}
+  };
+
+  w.onload = () => doPrint();
+  setTimeout(() => doPrint(), 500);
+}
+
+function openPrintWindow(): Window | null {
+  const w = window.open("", "_blank", "width=860,height=920");
+  if (!w) {
+    alert("팝업이 차단되어 인쇄 창을 열 수 없습니다. 브라우저에서 팝업 허용 후 다시 시도해주세요.");
+    return null;
+  }
+  return w;
 }
 
 export default function OwnerServiceHistoryPage() {
@@ -170,7 +369,6 @@ export default function OwnerServiceHistoryPage() {
   });
   const [endDate, setEndDate] = useState(() => ymd(new Date()));
 
-  // ✅ 작업 단위 행
   const [rows, setRows] = useState<OwnerWorkRow[]>([]);
   const [admins, setAdmins] = useState<AdminUserOption[]>([]);
 
@@ -181,11 +379,19 @@ export default function OwnerServiceHistoryPage() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
+  // ✅ 작업ID(=루트 reservation_id) -> 저장된 견적서(가장 최신)
+  const [savedIndex, setSavedIndex] = useState<Record<string, ServiceEstimateRow>>({});
+
   // 견적서 모달
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [estimateRes, setEstimateRes] = useState<OwnerWorkRow | null>(null);
   const [estimateItems, setEstimateItems] = useState<EstimateItem[]>([{ name: "공임", qty: 1, unitPrice: 0 }]);
   const [estimateMemo, setEstimateMemo] = useState("");
+
+  // ✅ 저장 상태
+  const [estimateSaving, setEstimateSaving] = useState(false);
+  const [savedEstimateId, setSavedEstimateId] = useState<string | null>(null);
+  const [savedIssuedAt, setSavedIssuedAt] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -205,19 +411,73 @@ export default function OwnerServiceHistoryPage() {
     };
   }, []);
 
+  function buildSnapshotForSave(r: OwnerWorkRow) {
+    return {
+      reservation_id: r.reservation_id,
+      full_name: r.full_name ?? null,
+      phone: r.phone ?? null,
+      car_model: r.car_model ?? null,
+      service_name: r.service_name ?? null,
+      scheduled_at: r.work_end_at ?? r.scheduled_at ?? null,
+
+      work_id: r.work_id,
+      work_start_at: r.work_start_at,
+      work_end_at: r.work_end_at,
+      work_children: r.work_children,
+      work_service_names: r.work_service_names ?? [],
+      assigned_admin_label: r.assigned_admin_label ?? null,
+      assigned_admin_id: r.assigned_admin_id ?? null,
+    };
+  }
+
   async function load() {
     setLoading(true);
     setMsg(null);
+
     try {
       const data = await adminListReservationsByRange(startDate, endDate);
-
-      // ✅ 장기수리(분할) → 작업 단위로 묶기
       const works = groupToWorks((data ?? []) as AdminReservationRow[]);
       setRows(works);
       setPage(1);
+
+      // ✅ 이 페이지의 작업ID들에 대해 "저장된 견적서" 여부를 인덱싱
+      // 발행일 기준 조회라서 범위를 넉넉히 잡음 (최근 1년)
+      const now = new Date();
+      const issueStart = (() => {
+        const d = new Date(now);
+        d.setDate(d.getDate() - 365);
+        return ymd(d);
+      })();
+      const issueEnd = (() => {
+        const d = new Date(now);
+        d.setDate(d.getDate() + 1);
+        return ymd(d);
+      })();
+
+      const estimates = (await ownerListServiceEstimatesByIssuedRange(issueStart, issueEnd)) ?? [];
+      const workIdSet = new Set(works.map((w) => String(w.reservation_id)));
+
+      const idx: Record<string, ServiceEstimateRow> = {};
+      for (const e of estimates) {
+        const rid = String((e as any).reservation_id ?? (e as any).snapshot?.reservation_id ?? "");
+        if (!rid) continue;
+        if (!workIdSet.has(rid)) continue;
+
+        const prev = idx[rid];
+        if (!prev) {
+          idx[rid] = e;
+          continue;
+        }
+
+        const pt = new Date(String((prev as any).issued_at)).getTime();
+        const nt = new Date(String((e as any).issued_at)).getTime();
+        if (Number.isFinite(nt) && (!Number.isFinite(pt) || nt >= pt)) idx[rid] = e;
+      }
+      setSavedIndex(idx);
     } catch (e: any) {
       setMsg(e?.message ?? String(e));
       setRows([]);
+      setSavedIndex({});
     } finally {
       setLoading(false);
     }
@@ -250,17 +510,18 @@ export default function OwnerServiceHistoryPage() {
         r.full_name ?? "",
         r.phone ?? "",
         r.car_model ?? "",
-        r.reservation_id, // work_id
+        r.reservation_id,
         r.assigned_admin_label ?? "",
         r.completed_admin_label ?? "",
         r.work_children ? `분할${r.work_children}` : "",
+        savedIndex[r.reservation_id]?.id ?? "",
       ]
         .join(" ")
         .toLowerCase();
 
       return hay.includes(qq);
     });
-  }, [rows, q, status, assignee]);
+  }, [rows, q, status, assignee, savedIndex]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
 
@@ -281,23 +542,45 @@ export default function OwnerServiceHistoryPage() {
   }, [filtered]);
 
   function goToOps(r: OwnerWorkRow) {
-    // ✅ 작업의 마지막 일정 날짜로 운영 화면 이동
     const ds = kstDateStr(r.work_end_at ?? r.scheduled_at);
     const qs = new URLSearchParams();
     qs.set("date", ds);
     qs.set("tab", "schedule");
-    // focus는 work_id(루트)로
     qs.set("focus", r.reservation_id);
     nav(`/admin?${qs.toString()}`);
   }
 
   function openEstimate(r: OwnerWorkRow) {
+    const saved = savedIndex[String(r.reservation_id)] ?? null;
+
     setEstimateRes(r);
-    setEstimateItems([
-      { name: r.service_name || "정비 항목", qty: Math.max(1, Number(r.quantity ?? 1)), unitPrice: 0 },
-      { name: "공임", qty: 1, unitPrice: 0 },
-    ]);
-    setEstimateMemo("");
+
+    if (saved) {
+      // ✅ 저장된 견적서가 있으면: 편집 모드로 로드
+      const items = Array.isArray((saved as any).items) ? ((saved as any).items as EstimateItem[]) : [];
+      setEstimateItems(
+        items.length
+          ? items
+          : [
+              { name: r.service_name || "정비 항목", qty: Math.max(1, Number(r.quantity ?? 1)), unitPrice: 0 },
+              { name: "공임", qty: 1, unitPrice: 0 },
+            ]
+      );
+      setEstimateMemo(String((saved as any).memo ?? ""));
+      setSavedEstimateId(String((saved as any).id ?? ""));
+      setSavedIssuedAt((saved as any).issued_at ? String((saved as any).issued_at) : null);
+    } else {
+      // ✅ 저장된 견적서가 없으면: 신규 생성 모드
+      setEstimateItems([
+        { name: r.service_name || "정비 항목", qty: Math.max(1, Number(r.quantity ?? 1)), unitPrice: 0 },
+        { name: "공임", qty: 1, unitPrice: 0 },
+      ]);
+      setEstimateMemo("");
+      setSavedEstimateId(null);
+      setSavedIssuedAt(null);
+    }
+
+    setMsg(null);
     setEstimateOpen(true);
   }
 
@@ -305,138 +588,94 @@ export default function OwnerServiceHistoryPage() {
     return estimateItems.reduce((acc, it) => acc + (Number(it.qty) || 0) * (Number(it.unitPrice) || 0), 0);
   }, [estimateItems]);
 
-  function printEstimate() {
+  async function saveEstimateOnly(): Promise<ServiceEstimateRow | null> {
+    if (!estimateRes) return null;
+
+    const id = savedEstimateId ?? createUuid();
+    const snapshot = buildSnapshotForSave(estimateRes);
+
+    try {
+      setEstimateSaving(true);
+      setMsg(null);
+
+      const saved = (await ownerUpsertServiceEstimate({
+        id,
+        reservationId: estimateRes.reservation_id,
+        snapshot,
+        items: estimateItems,
+        memo: estimateMemo,
+        totalAmount: estimateTotal,
+      })) as ServiceEstimateRow;
+
+      const sid = String((saved as any)?.id ?? id);
+      const issued = (saved as any)?.issued_at ? String((saved as any).issued_at) : null;
+
+      setSavedEstimateId(sid);
+      setSavedIssuedAt(issued);
+
+      // ✅ 목록에서 "저장됨"으로 즉시 표시되도록 인덱스 갱신
+      setSavedIndex((prev) => ({
+        ...prev,
+        [String(estimateRes.reservation_id)]: saved,
+      }));
+
+      return saved;
+    } catch (e: any) {
+      setMsg(e?.message ?? String(e));
+      return null;
+    } finally {
+      setEstimateSaving(false);
+    }
+  }
+
+  async function saveAndPrint() {
     if (!estimateRes) return;
 
-    const shopName = "TIRE FLEX";
-    const shopTel = "031-355-0018";
-    const issueDate = ymd(new Date());
-
-    const itemsHtml = estimateItems
-      .map((it) => {
-        const qty = Number(it.qty) || 0;
-        const unit = Number(it.unitPrice) || 0;
-        const line = qty * unit;
-        return `
-          <tr>
-            <td>${String(it.name ?? "").replaceAll("<", "&lt;")}</td>
-            <td style="text-align:right;">${money(qty)}</td>
-            <td style="text-align:right;">${money(unit)}</td>
-            <td style="text-align:right;"><b>${money(line)}</b></td>
-          </tr>
-        `;
-      })
-      .join("");
-
-    const html = `
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>견적서</title>
-  <style>
-    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;}
-    body{margin:24px;color:#0b0f18;}
-    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;}
-    .brand{font-weight:900;font-size:22px;letter-spacing:-0.4px;}
-    .sub{opacity:0.8;margin-top:6px;}
-    .card{margin-top:18px;border:1px solid #e6e8ee;border-radius:12px;padding:14px;}
-    .row{display:flex;gap:14px;flex-wrap:wrap;}
-    .col{flex:1;min-width:240px;}
-    .label{font-size:12px;opacity:0.7;}
-    .val{margin-top:6px;font-weight:800;}
-    table{width:100%;border-collapse:collapse;margin-top:12px;}
-    th,td{border-bottom:1px solid #eef0f5;padding:10px 8px;font-size:13px;}
-    th{text-align:left;background:#f7f8fb;}
-    .total{display:flex;justify-content:flex-end;margin-top:10px;font-size:16px;}
-    .total b{font-size:20px;margin-left:12px;}
-    .memo{margin-top:12px;white-space:pre-wrap;font-size:13px;opacity:0.85;}
-    @media print{
-      body{margin:0;}
-      .card{border:none;padding:0;}
-    }
-  </style>
-</head>
-<body>
-  <div class="top">
-    <div>
-      <div class="brand">${shopName} 견적서</div>
-      <div class="sub">Tel: ${shopTel}</div>
-    </div>
-    <div style="text-align:right;">
-      <div class="label">발행일</div>
-      <div class="val">${issueDate}</div>
-      <div class="label" style="margin-top:10px;">작업 ID</div>
-      <div class="val">${estimateRes.reservation_id}</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="row">
-      <div class="col">
-        <div class="label">고객명</div>
-        <div class="val">${(estimateRes.full_name ?? "-").replaceAll("<", "&lt;")}</div>
-      </div>
-      <div class="col">
-        <div class="label">연락처</div>
-        <div class="val">${(estimateRes.phone ?? "-").replaceAll("<", "&lt;")}</div>
-      </div>
-      <div class="col">
-        <div class="label">차량</div>
-        <div class="val">${(estimateRes.car_model ?? "-").replaceAll("<", "&lt;")}</div>
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:10px;">
-      <div class="col">
-        <div class="label">작업일정</div>
-        <div class="val">${workRangeLabel(estimateRes)}</div>
-      </div>
-      <div class="col">
-        <div class="label">상태</div>
-        <div class="val">${STATUS_LABEL[estimateRes.status]}</div>
-      </div>
-      <div class="col">
-        <div class="label">담당자</div>
-        <div class="val">${(estimateRes.assigned_admin_label ?? "미배정").replaceAll("<", "&lt;")}</div>
-      </div>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>항목</th>
-          <th style="text-align:right;">수량</th>
-          <th style="text-align:right;">단가</th>
-          <th style="text-align:right;">금액</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${itemsHtml}
-      </tbody>
-    </table>
-
-    <div class="total">
-      합계 <b>${money(estimateTotal)}원</b>
-    </div>
-
-    ${
-      estimateMemo.trim()
-        ? `<div class="memo"><div class="label">메모</div>${estimateMemo.replaceAll("<", "&lt;")}</div>`
-        : ""
-    }
-  </div>
-
-  <script>window.onload=()=>{window.print();}</script>
-</body>
-</html>
-    `.trim();
-
-    const w = window.open("", "_blank", "noopener,noreferrer,width=860,height=920");
+    const w = openPrintWindow();
     if (!w) return;
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+
+    const saved = await saveEstimateOnly();
+    if (!saved) {
+      try {
+        w.close();
+      } catch {}
+      return;
+    }
+
+    const snapshot = buildSnapshotForSave(estimateRes);
+    const html = buildEstimateHtml({
+      estimateNo: String((saved as any).id ?? savedEstimateId ?? undefined),
+      issueAtIso: (saved as any).issued_at ? String((saved as any).issued_at) : new Date().toISOString(),
+      snapshot: { ...snapshot, assigned_admin_label: estimateRes.assigned_admin_label ?? "미배정" },
+      items: estimateItems,
+      memo: estimateMemo,
+      totalAmount: estimateTotal,
+      workRangeText: workRangeLabel(estimateRes),
+      statusText: STATUS_LABEL[estimateRes.status],
+    });
+
+    writeAndPrint(w, html);
+  }
+
+  function printOnly() {
+    if (!estimateRes) return;
+
+    const w = openPrintWindow();
+    if (!w) return;
+
+    const snapshot = buildSnapshotForSave(estimateRes);
+    const html = buildEstimateHtml({
+      estimateNo: savedEstimateId ?? undefined,
+      issueAtIso: savedIssuedAt ?? new Date().toISOString(),
+      snapshot: { ...snapshot, assigned_admin_label: estimateRes.assigned_admin_label ?? "미배정" },
+      items: estimateItems,
+      memo: estimateMemo,
+      totalAmount: estimateTotal,
+      workRangeText: workRangeLabel(estimateRes),
+      statusText: STATUS_LABEL[estimateRes.status],
+    });
+
+    writeAndPrint(w, html);
   }
 
   return (
@@ -450,7 +689,7 @@ export default function OwnerServiceHistoryPage() {
         </div>
 
         <div className="ohTopActions">
-          <button className="ohBtn" onClick={load} disabled={loading}>
+          <button className="ohBtn" onClick={load} disabled={loading} type="button">
             {loading ? "로딩..." : "새로고침"}
           </button>
         </div>
@@ -494,15 +733,10 @@ export default function OwnerServiceHistoryPage() {
 
         <div className="ohField ohFieldWide">
           <div className="ohLabel">검색</div>
-          <input
-            className="ohInput"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="이름/전화/차량/서비스/작업ID/담당자"
-          />
+          <input className="ohInput" value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름/전화/차량/서비스/작업ID/담당자/견적번호" />
         </div>
 
-        <button className="ohBtnGhost" onClick={load} disabled={loading}>
+        <button className="ohBtnGhost" onClick={load} disabled={loading} type="button">
           적용
         </button>
       </div>
@@ -519,64 +753,83 @@ export default function OwnerServiceHistoryPage() {
 
       <div className="ohList">
         {pageItems.length ? (
-          pageItems.map((r) => (
-            <div key={r.work_id} className="ohRow">
-              <div className="ohRowMain">
-                <div className="ohRowTitle">
-                  <span className="ohService">{r.service_name}</span>
-                  <span className={`ohStatus ohStatus--${r.status}`}>{STATUS_LABEL[r.status]}</span>
+          pageItems.map((r) => {
+            const saved = savedIndex[String(r.reservation_id)] ?? null;
+
+            return (
+              <div key={r.work_id} className="ohRow">
+                <div className="ohRowMain">
+                  <div className="ohRowTitle">
+                    <span className="ohService">{r.service_name}</span>
+                    <span className={`ohStatus ohStatus--${r.status}`}>{STATUS_LABEL[r.status]}</span>
+                    {saved ? (
+                      <span className="ohChip ohChipOk" style={{ marginLeft: 10 }}>
+                        저장됨
+                      </span>
+                    ) : (
+                      <span className="ohChip" style={{ marginLeft: 10, opacity: 0.85 }}>
+                        미저장
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="ohRowSub">
+                    <span>작업: {workRangeLabel(r)}</span>
+                    {r.work_children > 1 ? (
+                      <>
+                        <span className="ohDot">·</span>
+                        <span>분할 {r.work_children}회</span>
+                      </>
+                    ) : null}
+                  </div>
+
+                  <div className="ohRowSub">
+                    <span>고객: {r.full_name ?? "-"}</span>
+                    <span className="ohDot">·</span>
+                    <span>전화: {r.phone ?? "-"}</span>
+                    <span className="ohDot">·</span>
+                    <span>차량: {r.car_model ?? "-"}</span>
+                  </div>
+
+                  <div className="ohRowSub2">
+                    <span>담당자: {r.assigned_admin_label ?? "미배정"}</span>
+                    <span className="ohDot">·</span>
+                    <span>완료자: {r.completed_admin_label ?? "-"}</span>
+                    <span className="ohDot">·</span>
+                    <span>완료시각: {r.completed_at ? toKstFull(r.completed_at) : "-"}</span>
+                    {saved ? (
+                      <>
+                        <span className="ohDot">·</span>
+                        <span style={{ opacity: 0.85 }}>견적번호: {String((saved as any).id ?? "-")}</span>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
 
-                <div className="ohRowSub">
-                  <span>작업: {workRangeLabel(r)}</span>
-                  {r.work_children > 1 ? (
-                    <>
-                      <span className="ohDot">·</span>
-                      <span>분할 {r.work_children}회</span>
-                    </>
-                  ) : null}
-                </div>
-
-                <div className="ohRowSub">
-                  <span>고객: {r.full_name ?? "-"}</span>
-                  <span className="ohDot">·</span>
-                  <span>전화: {r.phone ?? "-"}</span>
-                  <span className="ohDot">·</span>
-                  <span>차량: {r.car_model ?? "-"}</span>
-                </div>
-
-                <div className="ohRowSub2">
-                  <span>담당자: {r.assigned_admin_label ?? "미배정"}</span>
-                  <span className="ohDot">·</span>
-                  <span>완료자: {r.completed_admin_label ?? "-"}</span>
-                  <span className="ohDot">·</span>
-                  <span>완료시각: {r.completed_at ? toKstFull(r.completed_at) : "-"}</span>
+                <div className="ohRowActions">
+                  <button className="ohBtnGhost" onClick={() => goToOps(r)} title="운영 화면에서 보기" type="button">
+                    운영 →
+                  </button>
+                  <button className="ohBtn" onClick={() => openEstimate(r)} title={saved ? "저장된 견적서 편집" : "견적서 만들기"} type="button">
+                    {saved ? "견적서 편집" : "견적서"}
+                  </button>
                 </div>
               </div>
-
-              <div className="ohRowActions">
-                <button className="ohBtnGhost" onClick={() => goToOps(r)} title="운영 화면에서 보기">
-                  운영 →
-                </button>
-                <button className="ohBtn" onClick={() => openEstimate(r)} title="견적서 만들기">
-                  견적서
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="ohEmpty">{loading ? "불러오는 중..." : "데이터가 없습니다."}</div>
         )}
       </div>
 
       <div className="ohPager">
-        <button className="ohBtnGhost" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+        <button className="ohBtnGhost" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} type="button">
           이전
         </button>
         <div className="ohPagerInfo">
           {page} / {totalPages}
         </div>
-        <button className="ohBtnGhost" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+        <button className="ohBtnGhost" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} type="button">
           다음
         </button>
       </div>
@@ -594,12 +847,22 @@ export default function OwnerServiceHistoryPage() {
           <div className="ohModal">
             <div className="ohModalHead">
               <div>
-                <div className="ohModalTitle">견적서 만들기</div>
+                <div className="ohModalTitle">{savedEstimateId ? "견적서 편집" : "견적서 만들기"}</div>
                 <div className="ohModalSub">
                   {estimateRes.full_name ?? "-"} · {estimateRes.phone ?? "-"} · {workRangeLabel(estimateRes)}
                 </div>
+                {savedEstimateId ? (
+                  <div className="ohModalSub" style={{ marginTop: 6, opacity: 0.92 }}>
+                    저장됨 · 견적번호 {savedEstimateId}
+                    {savedIssuedAt ? ` · ${toKstFull(savedIssuedAt)}` : ""}
+                  </div>
+                ) : (
+                  <div className="ohModalSub" style={{ marginTop: 6, opacity: 0.8 }}>
+                    아직 저장되지 않았습니다
+                  </div>
+                )}
               </div>
-              <button className="ohIconBtn" onClick={() => setEstimateOpen(false)} aria-label="닫기">
+              <button className="ohIconBtn" onClick={() => setEstimateOpen(false)} aria-label="닫기" type="button">
                 ✕
               </button>
             </div>
@@ -651,9 +914,7 @@ export default function OwnerServiceHistoryPage() {
                           value={it.qty}
                           onChange={(e) => {
                             const v = Number(e.target.value);
-                            setEstimateItems((prev) =>
-                              prev.map((x, i) => (i === idx ? { ...x, qty: Number.isFinite(v) ? v : 0 } : x))
-                            );
+                            setEstimateItems((prev) => prev.map((x, i) => (i === idx ? { ...x, qty: Number.isFinite(v) ? v : 0 } : x)));
                           }}
                           placeholder="수량"
                         />
@@ -665,21 +926,14 @@ export default function OwnerServiceHistoryPage() {
                           value={it.unitPrice}
                           onChange={(e) => {
                             const v = Number(e.target.value);
-                            setEstimateItems((prev) =>
-                              prev.map((x, i) => (i === idx ? { ...x, unitPrice: Number.isFinite(v) ? v : 0 } : x))
-                            );
+                            setEstimateItems((prev) => prev.map((x, i) => (i === idx ? { ...x, unitPrice: Number.isFinite(v) ? v : 0 } : x)));
                           }}
                           placeholder="단가"
                         />
 
                         <div className="ohLineSum">{money((Number(it.qty) || 0) * (Number(it.unitPrice) || 0))}원</div>
 
-                        <button
-                          className="ohBtnDanger"
-                          type="button"
-                          onClick={() => setEstimateItems((prev) => prev.filter((_, i) => i !== idx))}
-                          title="삭제"
-                        >
+                        <button className="ohBtnDanger" type="button" onClick={() => setEstimateItems((prev) => prev.filter((_, i) => i !== idx))} title="삭제">
                           삭제
                         </button>
                       </div>
@@ -687,11 +941,7 @@ export default function OwnerServiceHistoryPage() {
                   </div>
 
                   <div className="ohItemActions">
-                    <button
-                      className="ohBtnGhost"
-                      type="button"
-                      onClick={() => setEstimateItems((prev) => [...prev, { name: "부품", qty: 1, unitPrice: 0 }])}
-                    >
+                    <button className="ohBtnGhost" type="button" onClick={() => setEstimateItems((prev) => [...prev, { name: "부품", qty: 1, unitPrice: 0 }])}>
                       + 항목 추가
                     </button>
 
@@ -715,13 +965,30 @@ export default function OwnerServiceHistoryPage() {
             </div>
 
             <div className="ohModalFoot">
-              <button className="ohBtnGhost" onClick={() => setEstimateOpen(false)}>
+              <button className="ohBtnGhost" onClick={() => setEstimateOpen(false)} type="button" disabled={estimateSaving}>
                 닫기
               </button>
-              <button className="ohBtn" onClick={printEstimate}>
-                인쇄/저장(PDF)
+
+              <button className="ohBtnGhost" onClick={printOnly} type="button" disabled={estimateSaving}>
+                인쇄만
+              </button>
+
+              <button className="ohBtnGhost" onClick={saveEstimateOnly} type="button" disabled={estimateSaving}>
+                {estimateSaving ? "저장중..." : "저장만"}
+              </button>
+
+              <button className="ohBtn" onClick={saveAndPrint} type="button" disabled={estimateSaving}>
+                {estimateSaving ? "저장중..." : "저장 후 인쇄/저장(PDF)"}
               </button>
             </div>
+
+            {savedEstimateId ? (
+              <div style={{ padding: "0 14px 14px 14px" }}>
+                <button className="ohBtnGhost" type="button" onClick={() => nav("/owner/estimates")} style={{ width: "100%" }}>
+                  견적서 관리로 이동 →
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
