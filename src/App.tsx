@@ -100,29 +100,28 @@ function AppLayout({
       <footer className="appFooter">
         <div className="appFooterInner">
           <div className="appFooterBlock">
-            <strong>타이어FLEX</strong><br />
-            <span>대표자 : 이정준</span><br />
-            <span>사업자등록번호 : 775-53-00721</span>
+            <strong>FLAT</strong><br />
+            <span>대표자 : 박명준</span><br />
+            <span>사업자등록번호 : 665-63-00699</span>
           </div>
 
           <div className="appFooterBlock">
             <strong>Contact</strong><br />
-            <span>전화 : 031-352-0114</span><br />
-            <span>휴대폰 : 010-6677-8298</span>
+            <span>휴대폰 : 010-8233-4946</span><br />
+            <span><a href="https://www.instagram.com/flat_ilsan_kr/">FLAT 일산 인스타그램⭐</a></span>
           </div>
 
           <div className="appFooterBlock">
-            <strong>Location</strong><br />
-            <span>경기도 화성시 남양읍 화성로 1255</span><br />
+            <strong>오시는 길</strong><br />
+            <span>고양시 일산서구 덕산로57번길 13번지</span><br />
             <span>
-              1255, Hwaseong-ro, Namyang-eup, Hwaseong-si, Gyeonggi-do, Republic of
-              Korea
+              13, Deoksan-ro 57beon-gil, Ilsanseo-gu, Goyang-si, Gyeonggi-do, Republic of Korea
             </span>
           </div>
         </div>
 
         <div className="appFooterCopy">
-          © {new Date().getFullYear()} TireFLEX. All rights reserved.
+          © {new Date().getFullYear()} FLAT. All rights reserved.
         </div>
       </footer>
     </div>
