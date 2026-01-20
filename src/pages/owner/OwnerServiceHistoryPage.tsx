@@ -186,8 +186,8 @@ function buildEstimateHtml(input: {
   workRangeText?: string;
   statusText?: string;
 }) {
-  const shopName = "TIRE FLEX";
-  const shopTel = "031-355-0018";
+  const shopName = "FLAT";
+  const shopTel = "010-8233-4946";
   const issueDate = ymd(new Date(input.issueAtIso));
   const snap = input.snapshot ?? {};
 

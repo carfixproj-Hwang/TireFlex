@@ -1,7 +1,7 @@
 // src/components/Navbar.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import logo from "../assets/tireflex-logo.png";
+import logo from "../assets/FLAT.png";
 import "../styles/navbarPremium.css";
 import { supabase } from "../lib/supabaseClient";
 
@@ -90,8 +90,8 @@ export default function Navbar({ isAuthed, isAdmin, role }: Props) {
         <Link to="/" className="navBrand" aria-label="타이어 FLEX 홈" onClick={() => setAdminOpen(false)}>
           <img src={logo} alt="타이어 FLEX" />
           <div className="navBrandText">
-            <span className="navBrandTitle">TIRE FLEX</span>
-            <span className="navBrandSub">031-355-0018</span>
+            <span className="navBrandTitle">FLAT</span>
+            <span className="navBrandSub">010-8233-4946</span>
           </div>
         </Link>
 

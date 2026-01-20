@@ -1,6 +1,6 @@
 // src/App.tsx
 import { useEffect, useMemo, useState } from "react";
-import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { supabase } from "./lib/supabaseClient";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -33,7 +33,7 @@ type AppRole = "owner" | "staff" | "member";
 
 type SessionState = {
   loading: boolean;
-  roleLoading: boolean; // ✅ 추가
+  roleLoading: boolean;
   userId: string | null;
   role: AppRole;
   isAdmin: boolean;
@@ -135,7 +135,7 @@ function AppLayout({
 function AppInner() {
   const [session, setSession] = useState<SessionState>({
     loading: true,
-    roleLoading: false, // ✅ 추가
+    roleLoading: false,
     userId: null,
     role: "member",
     isAdmin: false,
@@ -160,7 +160,7 @@ function AppInner() {
               ...prev,
               role,
               isAdmin: role === "owner" || role === "staff",
-              roleLoading: false, // ✅ role 확정
+              roleLoading: false,
             }
       );
     };
@@ -186,7 +186,7 @@ function AppInner() {
 
         setSession({
           loading: false,
-          roleLoading: !!uid, // ✅ 로그인 상태면 role 로딩 시작
+          roleLoading: !!uid,
           userId: uid,
           role: "member",
           isAdmin: false,
@@ -214,7 +214,7 @@ function AppInner() {
 
       setSession({
         loading: false,
-        roleLoading: !!uid, // ✅ 로그인 상태면 role 로딩 시작
+        roleLoading: !!uid,
         userId: uid,
         role: "member",
         isAdmin: false,
@@ -235,7 +235,6 @@ function AppInner() {
   const isOwner = session.role === "owner";
   const isStaffOrOwner = session.role === "staff" || session.role === "owner";
 
-  // ✅ roleLoading 중에는 라우트 판단(redirect) 자체를 막아서 F5해도 현재 URL 유지
   if (session.loading || session.roleLoading) {
     return (
       <div className="appBoot">
@@ -350,13 +349,30 @@ function AppInner() {
 }
 
 /* ======================
+   Router Root (핵심: reset 중엔 RestoreLastRouteOnReload 비활성화)
+====================== */
+function RouterRoot() {
+  const loc = useLocation();
+  const skipRestore = useMemo(() => {
+    const qs = new URLSearchParams(loc.search);
+    return loc.pathname === "/auth" && qs.get("mode") === "reset";
+  }, [loc.pathname, loc.search]);
+
+  return (
+    <>
+      {!skipRestore && <RestoreLastRouteOnReload />}
+      <AppInner />
+    </>
+  );
+}
+
+/* ======================
    App Root
 ====================== */
 export default function App() {
   return (
     <BrowserRouter>
-      <RestoreLastRouteOnReload />
-      <AppInner />
+      <RouterRoot />
     </BrowserRouter>
   );
 }

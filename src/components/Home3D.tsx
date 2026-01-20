@@ -186,8 +186,8 @@ export default function Home3D({
   onGoAdmin,
   bookHref = "/book",
   adminHref = "/admin/schedule",
-  title = "타이어 FLEX",
-  subtitle = "경차부터 슈퍼카까지 경정비와 타이어는 Tire FLEX에 맡기세요.",
+  title = "InSide FLAT",
+  subtitle = "경차부터 슈퍼카까지 경정비와 타이어는 FLAT에 맡기세요.",
 }: Home3DProps) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   useSpotlightVars(wrapRef);

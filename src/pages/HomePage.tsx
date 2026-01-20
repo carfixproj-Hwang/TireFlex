@@ -1520,9 +1520,10 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
             </h1>
 
             <p className="heroSub">
-              타이어 플렉스가 함께합니다.
+              Flat이 함께합니다.
               <br />
-              타이어교체 및 경정비, 기타 문의 031-355-0018
+              메인터넌스의 모든 것 V8 이면 사장님이 더 좋아해요👍👍
+              <br /> 문의 : 010-8233-4946
               <br />
               <br />
             </p>
@@ -1586,7 +1587,7 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
 
                   <div className="opsInlineSub">
                     <label className="opsInlineSelectWrap">
-                      <span className="opsInlineDim">기준 아이템</span>
+                      <span className="opsInlineDim">정비목록</span>
                       <select className="opsInlineSelect" value={slotBasisId} onChange={(e) => setSlotBasisId(e.target.value)}>
                         {activeItems.map((it) => (
                           <option key={it.id} value={it.id}>
@@ -1654,7 +1655,7 @@ export default function HomePage({ isAuthed, isAdmin }: HomePageProps) {
             <div className="modalPanel">
               <div className="modalHead">
                 <div>
-                  <div className="modalTitle">정비 아이템 선택</div>
+                  <div className="modalTitle">정비 종류 선택</div>
                   <div className="modalSub">선택 후 예약 화면으로 이동합니다.</div>
                 </div>
                 <button className="iconBtn" onClick={() => setPickerOpen(false)} aria-label="닫기">

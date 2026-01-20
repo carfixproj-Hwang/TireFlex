@@ -1,6 +1,6 @@
 // src/pages/AuthPage.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 
 type Mode = "login" | "signup" | "verify" | "reset";
@@ -9,8 +9,6 @@ type ResetStep = "request" | "verify" | "set";
 function trim(v: string) {
   return (v ?? "").trim();
 }
-
-// ✅ 공백(whitespace) 금지 유틸
 function stripWhitespace(v: string) {
   return String(v ?? "").replace(/\s+/g, "");
 }
@@ -20,6 +18,7 @@ function hasWhitespace(v: string) {
 
 export default function AuthPage() {
   const nav = useNavigate();
+  const loc = useLocation();
   const mountedRef = useRef(true);
 
   const [mode, setMode] = useState<Mode>("login");
@@ -27,10 +26,8 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // 이메일 인증 OTP(Token)
   const [otp, setOtp] = useState("");
 
-  // 비번 재설정(토큰)
   const [resetStep, setResetStep] = useState<ResetStep>("request");
   const [newPw, setNewPw] = useState("");
   const [newPw2, setNewPw2] = useState("");
@@ -38,11 +35,17 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // reset 중 SIGNED_IN 이벤트로 홈 튀는 것 방지
   const suppressRedirectRef = useRef(false);
 
   const origin = useMemo(() => window.location.origin, []);
   const emailTrimmed = useMemo(() => trim(email).toLowerCase(), [email]);
+
+  const qs = useMemo(() => new URLSearchParams(loc.search), [loc.search]);
+  const isResetRoute = useMemo(() => qs.get("mode") === "reset", [qs]);
+  const stepFromQs = useMemo(() => {
+    const s = qs.get("step");
+    return s === "request" || s === "verify" || s === "set" ? (s as ResetStep) : null;
+  }, [qs]);
 
   const styles = useMemo(() => {
     const bg: React.CSSProperties = {
@@ -100,7 +103,12 @@ export default function AuthPage() {
       border: "1px solid rgba(255,255,255,0.32)",
     };
 
-    const label: React.CSSProperties = { fontSize: 12, opacity: 0.78, color: "rgba(255,255,255,0.90)", marginBottom: 6 };
+    const label: React.CSSProperties = {
+      fontSize: 12,
+      opacity: 0.78,
+      color: "rgba(255,255,255,0.90)",
+      marginBottom: 6,
+    };
 
     const input: React.CSSProperties = {
       width: "100%",
@@ -189,7 +197,6 @@ export default function AuthPage() {
     };
   }, []);
 
-  // ✅ 공백 금지 핸들러(입력/붙여넣기 공통)
   const onPwChange = (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
     const cleaned = stripWhitespace(raw);
@@ -204,7 +211,6 @@ export default function AuthPage() {
   };
 
   const blockSpaceKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // spacebar
     if (e.key === " ") e.preventDefault();
   };
 
@@ -219,35 +225,36 @@ export default function AuthPage() {
     if (next === "reset") {
       suppressRedirectRef.current = true;
       setResetStep("request");
+      nav("/auth?mode=reset&step=request", { replace: true });
     } else {
       suppressRedirectRef.current = false;
     }
   }
 
+  // URL이 reset이면 상태를 reset으로 고정
   useEffect(() => {
     mountedRef.current = true;
 
-    // URL 힌트(선택): /auth?mode=reset 로 들어오면 reset 화면 열어둠
-    const qs = new URLSearchParams(window.location.search);
-    const preset = qs.get("mode");
-    if (preset === "reset") {
+    if (isResetRoute) {
       suppressRedirectRef.current = true;
       setMode("reset");
-      setResetStep("set"); // 링크 플로우로 세션이 이미 생겼을 가능성
+      setResetStep(stepFromQs ?? "request");
     }
 
-    // 이미 세션이 있으면 홈으로 (단, reset 흐름이면 이동 막음)
+    // 이미 세션이 있어도 reset 플로우면 홈 이동 금지
     (async () => {
       const { data } = await supabase.auth.getSession();
       if (!mountedRef.current) return;
-      if (data.session && !suppressRedirectRef.current) nav("/", { replace: true });
+      if (data.session && !(isResetRoute || mode === "reset" || suppressRedirectRef.current)) {
+        nav("/", { replace: true });
+      }
     })();
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mountedRef.current) return;
 
-      // reset 중에는 자동 홈 이동 막기 (토큰 verify 시 SIGNED_IN 발생 가능)
-      if (suppressRedirectRef.current) return;
+      // ✅ reset 라우트면 SIGNED_IN 되어도 절대 홈으로 보내지 않음
+      if (isResetRoute || mode === "reset" || suppressRedirectRef.current) return;
 
       if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") && session) {
         nav("/", { replace: true });
@@ -258,7 +265,7 @@ export default function AuthPage() {
       mountedRef.current = false;
       sub.subscription.unsubscribe();
     };
-  }, [nav]);
+  }, [nav, isResetRoute, stepFromQs, mode]);
 
   async function doLogin() {
     const e = emailTrimmed;
@@ -307,10 +314,7 @@ export default function AuthPage() {
       const { error } = await supabase.auth.signUp({
         email: e,
         password: p,
-        options: {
-          // 링크 플로우 백업용
-          emailRedirectTo: `${origin}/auth`,
-        },
+        options: { emailRedirectTo: `${origin}/auth` },
       });
 
       if (error) {
@@ -402,8 +406,7 @@ export default function AuthPage() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(e, {
-        // 링크 플로우 백업(토큰 플로우가 기본)
-        redirectTo: `${origin}/auth?mode=reset`,
+        redirectTo: `${origin}/auth?mode=reset&step=set`,
       });
 
       if (error) {
@@ -412,7 +415,9 @@ export default function AuthPage() {
       }
 
       suppressRedirectRef.current = true;
+      setMode("reset");
       setResetStep("verify");
+      nav("/auth?mode=reset&step=verify", { replace: true });
       setMsg("비밀번호 재설정 코드를 보냈어요. 메일의 Token을 입력하세요.");
     } catch (e: any) {
       setMsg(e?.message ?? String(e));
@@ -432,8 +437,8 @@ export default function AuthPage() {
     setMsg(null);
 
     try {
-      // recovery 토큰 검증 → 세션이 생길 수 있음(그 세션으로 updateUser 가능)
-      const { data, error } = await supabase.auth.verifyOtp({
+      // recovery 토큰 검증 → 세션 생성(SIGNED_IN) 가능
+      const { error } = await supabase.auth.verifyOtp({
         email: e,
         token: code,
         type: "recovery",
@@ -444,18 +449,12 @@ export default function AuthPage() {
         return;
       }
 
-      // 여기서 SIGNED_IN이 발생할 수도 있는데, reset 중이니 자동 redirect 막아둠
+      // ✅ SIGNED_IN 되어도 reset 페이지 유지
       suppressRedirectRef.current = true;
-
-      // 세션이 생기면 새 비번 입력 단계로
-      if (data?.session) {
-        setResetStep("set");
-        setMsg("코드 확인 완료. 새 비밀번호를 설정하세요.");
-      } else {
-        // 드물게 세션이 바로 안오면, 그래도 set 단계로 유도
-        setResetStep("set");
-        setMsg("코드 확인 완료. 새 비밀번호를 설정하세요.");
-      }
+      setMode("reset");
+      setResetStep("set");
+      nav("/auth?mode=reset&step=set", { replace: true });
+      setMsg("코드 확인 완료. 새 비밀번호를 설정하세요.");
     } catch (e: any) {
       setMsg(e?.message ?? String(e));
     } finally {
@@ -481,7 +480,6 @@ export default function AuthPage() {
         return;
       }
 
-      // 이제 정상 흐름으로 돌리고 홈 이동
       suppressRedirectRef.current = false;
       setMsg("비밀번호 변경 완료. 홈으로 이동합니다.");
       nav("/", { replace: true });
@@ -511,7 +509,6 @@ export default function AuthPage() {
     if (mode === "login") return doLogin();
     if (mode === "signup") return doSignup();
     if (mode === "verify") return doVerifyEmail();
-    // reset
     if (resetStep === "request") return doResetRequest();
     if (resetStep === "verify") return doResetVerify();
     return doResetSet();
@@ -529,7 +526,6 @@ export default function AuthPage() {
         <div style={styles.head}>계정</div>
 
         <div style={styles.body}>
-          {/* Segmented */}
           <div style={styles.segWrap}>
             <button
               type="button"
@@ -567,7 +563,6 @@ export default function AuthPage() {
             </button>
           </div>
 
-          {/* Email */}
           <div>
             <div style={styles.label}>이메일</div>
             <input
@@ -588,7 +583,6 @@ export default function AuthPage() {
             ) : null}
           </div>
 
-          {/* Password (login/signup) */}
           {showPassword ? (
             <div>
               <div style={styles.label}>비밀번호</div>
@@ -609,7 +603,6 @@ export default function AuthPage() {
             </div>
           ) : null}
 
-          {/* Email verify OTP */}
           {showEmailOtp ? (
             <div>
               <div style={styles.label}>인증코드(Token)</div>
@@ -638,7 +631,6 @@ export default function AuthPage() {
             </div>
           ) : null}
 
-          {/* Reset flow */}
           {showReset ? (
             <div style={{ display: "grid", gap: 10 }}>
               {resetStep === "verify" ? (
@@ -667,6 +659,7 @@ export default function AuthPage() {
                       type="button"
                       onClick={() => {
                         setResetStep("request");
+                        nav("/auth?mode=reset&step=request", { replace: true });
                         setOtp("");
                         setMsg(null);
                       }}
@@ -713,17 +706,15 @@ export default function AuthPage() {
                   </div>
 
                   <div style={styles.hint}>
-                    * Token 검증 후 세션이 생성되어야 비밀번호 변경이 가능합니다. (이 화면은 Token 기반 플로우 기준)
+                    * Token 검증 후 세션이 생성되어야 비밀번호 변경이 가능합니다.
                   </div>
                 </>
               ) : null}
             </div>
           ) : null}
 
-          {/* Message */}
           {msg ? <div style={styles.msgDanger}>{msg}</div> : null}
 
-          {/* Primary action */}
           <button
             type="button"
             onClick={onPrimary}
@@ -733,7 +724,6 @@ export default function AuthPage() {
             {actionLabel}
           </button>
 
-          {/* Small footer actions */}
           {mode !== "reset" ? (
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
               <button
@@ -761,6 +751,7 @@ export default function AuthPage() {
                   type="button"
                   onClick={() => {
                     setResetStep("verify");
+                    nav("/auth?mode=reset&step=verify", { replace: true });
                     setMsg(null);
                   }}
                   disabled={loading}
@@ -775,7 +766,6 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* 아래 여백/통일감 */}
       <div style={{ marginTop: 12, fontSize: 12, opacity: 0.75, color: "rgba(255,255,255,0.86)" }}>
         * 관리자 권한(Owner/Staff)은 로그인 후 서버 RPC(get_my_role)로 판별됩니다.
       </div>
