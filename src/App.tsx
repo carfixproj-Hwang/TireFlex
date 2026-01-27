@@ -6,6 +6,7 @@ import { supabase } from "./lib/supabaseClient";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Navbar from "./components/Navbar";
 import RestoreLastRouteOnReload from "./components/RestoreLastRouteOnReload";
+import ChatWidget from "./components/ChatWidget";
 
 import HomePage from "./pages/HomePage";
 import AuthPage from "./pages/AuthPage";
@@ -96,6 +97,8 @@ function AppLayout({
       <main className="appMain appMain--full" style={{ paddingTop: 64 }}>
         <Outlet />
       </main>
+
+      <ChatWidget />
 
       <footer className="appFooter">
         <div className="appFooterInner">
